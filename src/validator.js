@@ -97,12 +97,7 @@ async function continuousValidation() {
       );
 
       // Validate redemptions
-      await ValidateAtlasBtcRedemptions(
-        redemptions,
-        nearConfig.accountId,
-        near
-      );
-
+      await ValidateAtlasBtcRedemptions(redemptions, near);
 
       // Sleep for a while before the next iteration
     } catch (error) {
