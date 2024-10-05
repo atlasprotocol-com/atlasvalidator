@@ -4,12 +4,6 @@ const { getChainConfig } = require("./network.chain.config");
 const { flagsBatch } = require("./batchFlags");
 
 // VALIDATOR BATCH FOR BTC DEPOSITS:
-// 1. Retrieve all NEAR deposit records with status = DEP_BTC_DEPOSITED_INTO_ATLAS and verified_count < chain_id.validators_threshold
-// 2. For each NEAR deposit record, find respective bitcoin txn from bitcoin mempool with status = confirmed and prepare a mempool_deposit record to pass into NEAR function
-// 3. Call NEAR function increment_redemption_verified_count by passing in the mempool_deposit record
-// 4. TO DISCUSS: If validator_threshold gets updated suddenly, will this introduce any bugs?
-// 5. TO DISCUSS: Cannot delete verifications records else we are not able to allocate the airdrop
-// 6. TO DISCUSS: How to prevent authorised validators to directly call the public NEAR function increment_deposit_verified_count without going through this server.js function?
 async function ValidateAtlasBtcDeposits(
   deposits,
   btcAtlasDepositAddress,
