@@ -17,7 +17,8 @@ const { Near } = require("./services/near");
 const { Bitcoin } = require("./services/bitcoin");
 
 // Load configuration
-const config = require("./config/config.json");
+const config = require(process.env.ATLAS_VALIDATOR_CONFIG ||
+  "./config/config.json");
 
 const nearConfig = config.near;
 const btcConfig = config.bitcoin;
