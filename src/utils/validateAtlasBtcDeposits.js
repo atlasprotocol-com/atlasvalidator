@@ -1,4 +1,5 @@
 const { getConstants } = require("../constants");
+const { Ethereum } = require("../services/ethereum");
 
 const { getChainConfig } = require("./network.chain.config");
 const { flagsBatch } = require("./batchFlags");
@@ -106,4 +107,107 @@ async function ValidateAtlasBtcDeposits(
   }
 }
 
-module.exports = { ValidateAtlasBtcDeposits };
+async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
+  const batchName = `Validator Batch ValidateAtlasBtcDepositsMintedTxnHash`;
+
+  if (flagsBatch.ValidateAtlasBtcDepositsMintedTxnHashRunning) {
+    console.log(`Previous ${batchName} incomplete. Will skip this run.`);
+    return;
+  } else {
+    try {
+      console.log(`${batchName}. Start run ...`);
+      flagsBatch.ValidateAtlasBtcDepositsMintedTxnHashRunning = true;
+
+      const { DEPOSIT_STATUS, NETWORK_TYPE } = getConstants();
+      const allDepositsToValidate = deposits.filter(
+        (deposit) =>
+          deposit.status === DEPOSIT_STATUS.DEP_BTC_PENDING_MINTED_INTO_ABTC &&
+          deposit.remarks === "" &&
+          deposit.minted_txn_hash_verified_count < validatorThreshold &&
+          deposit.minted_txn_hash
+      );
+
+      if (allDepositsToValidate.length === 0) {
+        console.log("No deposits to validate.");
+        return;
+      }
+
+      // Find the earliest timestamp in the deposits
+      const earliestTimestamp = Math.min(
+        ...allDepositsToValidate.map((deposit) => deposit.timestamp)
+      );
+
+      for (const deposit of allDepositsToValidate) {
+        const chainConfig = getChainConfig(deposit.receiving_chain_id);
+        if (chainConfig.networkType === NETWORK_TYPE.EVM) {
+          const ethereum = new Ethereum(
+            chainConfig.chainID,
+            chainConfig.chainRpcUrl,
+            chainConfig.gasLimit,
+            chainConfig.aBTCAddress,
+            chainConfig.abiPath
+          );
+
+          const startBlock = await ethereum.getBlockNumberByTimestamp(earliestTimestamp);
+          const endBlock = await ethereum.getCurrentBlockNumber();
+          const batchSize = chainConfig.batchSize;
+
+          const events = await ethereum.getPastMintEventsInBatches(
+            startBlock,
+            endBlock,
+            batchSize
+          );
+
+          const matchingEvent = events.find(
+            (event) => event.returnValues.btcTxnHash === deposit.btc_txn_hash,
+          );
+
+          if (matchingEvent) {
+            const { btcTxnHash, transactionHash } = matchingEvent;
+            let blnValidated = await near.incrementDepositMintedTxnHashVerifiedCount(
+              btcTxnHash,
+              transactionHash,
+            );
+
+            if (blnValidated) {
+              console.log(`BTC Txn Hash ${btcTxnHash} with Minted Txn Hash ${transactionHash} on chain ID ${deposit.receiving_chain_id} Validated.`);
+            }
+          }
+          
+        } else if (chainConfig.networkType === NETWORK_TYPE.NEAR) {
+          const startBlock = await near.getBlockNumberByTimestamp(earliestTimestamp);
+          const endBlock = await near.getCurrentBlockNumber();
+
+          const events = await near.getPastMintEventsInBatches(
+            startBlock,
+            endBlock
+          );
+
+          const matchingEvent = events.find(
+            (event) => event.btcTxnHash === deposit.btc_txn_hash,
+          );
+
+          if (matchingEvent) {
+            const { btcTxnHash, transactionHash } = matchingEvent;
+            let blnValidated = await near.incrementDepositMintedTxnHashVerifiedCount(
+              btcTxnHash,
+              transactionHash,
+            );
+
+            if (blnValidated) {
+              console.log(`BTC Txn Hash ${btcTxnHash} with Minted Txn Hash ${transactionHash} on chain ID ${deposit.receiving_chain_id} Validated.`);
+            }
+          }
+        }
+      }
+
+      console.log(`${batchName} completed successfully.`);
+    } catch (error) {
+      console.error(`Error ${batchName}:`, error);
+    } finally {
+      flagsBatch.ValidateAtlasBtcDepositsMintedTxnHashRunning = false;
+    }
+  }
+}
+
+module.exports = { ValidateAtlasBtcDeposits, ValidateAtlasBtcDepositsMintedTxnHash };

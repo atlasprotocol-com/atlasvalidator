@@ -1,13 +1,8 @@
 // batchFlags.js
-const flagsBatch = {
-    UpdateAtlasBtcDepositsRunning: false,
+const flagsBatch = {    
     ValidateAtlasBtcDepositsRunning: false,
-    MintaBtcToReceivingChainRunning: false,
-    UpdateAtlasAbtcMintedRunning: false,
-    UpdateAtlasBtcRedemptionsRunning: false,
+    ValidateAtlasBtcDepositsMintedTxnHashRunning: false,            
     ValidateAtlasBtcRedemptionsRunning: false,
-    SendBtcBackToUserRunning: false,
-    UpdateAtlasBtcBackToUserRunning: false,
   };
   
   module.exports = { flagsBatch };
