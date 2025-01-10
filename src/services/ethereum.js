@@ -151,8 +151,7 @@ class Ethereum {
   }
 
   async getPastMintEventsInBatches(startBlock, endBlock, batchSize) {
-    console.log(`Fetching Events in batches... ${startBlock} -> ${endBlock}`);
-
+    console.log(`Fetching Mint events in batches... ${startBlock} -> ${endBlock}`);
     return this._scanEvents(
       EVENT_NAME.MINT_DEPOSIT,
       startBlock,

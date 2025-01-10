@@ -2,6 +2,7 @@
 
 const {
   ValidateAtlasBtcDeposits,
+  ValidateAtlasBtcDepositsMintedTxnHash,
 } = require("./utils/validateAtlasBtcDeposits");
 const {
   ValidateAtlasBtcRedemptions,
@@ -97,6 +98,9 @@ async function continuousValidation() {
         near,
         bitcoin
       );
+
+      // Validate minted transaction hashes
+      await ValidateAtlasBtcDepositsMintedTxnHash(deposits, near);
 
       // Validate redemptions
       await ValidateAtlasBtcRedemptions(redemptions, near);

@@ -79,6 +79,7 @@ class Near {
           "update_redemption_remarks",
           "update_redemption_btc_txn_hash",
           "increment_deposit_verified_count",
+          "increment_deposit_minted_txn_hash_verified_count",
           "increment_redemption_verified_count",
           "create_mint_abtc_signed_tx",
           "update_deposit_minted",
@@ -360,6 +361,13 @@ class Near {
   async incrementDepositVerifiedCount(btcMempoolDepositRecord) {
     return this.makeNearRpcChangeCall("increment_deposit_verified_count", {
       mempool_deposit: btcMempoolDepositRecord,
+    });
+  }
+
+  async incrementDepositMintedTxnHashVerifiedCount(btcTxnHash, transactionHash) {
+    return this.makeNearRpcChangeCall("increment_deposit_minted_txn_hash_verified_count", {
+      btc_txn_hash: btcTxnHash,
+      minted_txn_hash: transactionHash,
     });
   }
 
