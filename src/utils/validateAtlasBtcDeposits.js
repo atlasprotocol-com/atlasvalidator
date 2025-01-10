@@ -124,7 +124,7 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
         const chainConfig = getChainConfig(deposit.receiving_chain_id);
         const validatorThreshold = chainConfig.validators_threshold;
         return (
-          deposit.status === DEPOSIT_STATUS.DEP_BTC_PENDING_MINTED_INTO_ABTC &&
+          deposit.status === DEPOSIT_STATUS.BTC_PENDING_MINTED_INTO_ABTC &&
           deposit.remarks === "" &&
           deposit.minted_txn_hash_verified_count < validatorThreshold &&
           deposit.minted_txn_hash
@@ -167,7 +167,8 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
           );
 
           if (matchingEvent) {
-            const { btcTxnHash, transactionHash } = matchingEvent;
+            const { transactionHash } = matchingEvent;
+            const { btcTxnHash } = matchingEvent.returnValues;
             let blnValidated = await near.incrementDepositMintedTxnHashVerifiedCount(
               btcTxnHash,
               transactionHash,
@@ -192,7 +193,8 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
           );
 
           if (matchingEvent) {
-            const { btcTxnHash, transactionHash } = matchingEvent;
+            const { transactionHash } = matchingEvent;
+            const { btcTxnHash } = matchingEvent.returnValues;            
             let blnValidated = await near.incrementDepositMintedTxnHashVerifiedCount(
               btcTxnHash,
               transactionHash,

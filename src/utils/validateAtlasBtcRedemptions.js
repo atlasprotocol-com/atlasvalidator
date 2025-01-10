@@ -156,6 +156,7 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
               remarks: "",
               date_created: timestamp, // this field not used in validation
               verified_count: 0,
+              btc_txn_hash_verified_count: 0, // this field not used in validation
               custody_txn_id: "",
             };
 
