@@ -103,6 +103,7 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
               remarks: "",
               date_created: timestamp, // this field not used in validation
               verified_count: 0,
+              btc_txn_hash_verified_count: 0,
               custody_txn_id: "",
             };
 
@@ -180,7 +181,11 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
   }
 }
 
-async function ValidateAtlasBtcRedemptionsBtcTxnHash(redemptions, btcMempool, near) {
+async function ValidateAtlasBtcRedemptionsBtcTxnHash(
+  redemptions,
+  btcMempool,
+  near
+) {
   const batchName = `Validator Batch ValidateAtlasBtcRedemptionsBtcTxnHash`;
 
   if (flagsBatch.ValidateAtlasBtcRedemptionsBtcTxnHashRunning) {
@@ -193,15 +198,19 @@ async function ValidateAtlasBtcRedemptionsBtcTxnHash(redemptions, btcMempool, ne
 
       const isProductionMode = await near.isProductionMode();
       const { REDEMPTION_STATUS, NETWORK_TYPE } = getConstants();
-      const chainConfig = getChainConfig(isProductionMode ? NETWORK_TYPE.BITCOIN : NETWORK_TYPE.SIGNET);
+      const chainConfig = getChainConfig(
+        isProductionMode ? NETWORK_TYPE.BITCOIN : NETWORK_TYPE.SIGNET
+      );
       let validatorThreshold = chainConfig.validators_threshold;
 
-      const allRedemptionsToValidate = redemptions.filter((redemption) => (
-        redemption.status === REDEMPTION_STATUS.BTC_PENDING_MEMPOOL_CONFIRMATION &&
-        redemption.btc_txn_hash &&
-        redemption.remarks === "" &&
-        redemption.btc_txn_hash_verified_count < validatorThreshold
-      ));
+      const allRedemptionsToValidate = redemptions.filter(
+        (redemption) =>
+          redemption.status ===
+            REDEMPTION_STATUS.BTC_PENDING_MEMPOOL_CONFIRMATION &&
+          redemption.btc_txn_hash &&
+          redemption.remarks === "" &&
+          redemption.btc_txn_hash_verified_count < validatorThreshold
+      );
 
       for (const redemption of allRedemptionsToValidate) {
         const btcMempoolRecord = btcMempool.find(
@@ -210,10 +219,11 @@ async function ValidateAtlasBtcRedemptionsBtcTxnHash(redemptions, btcMempool, ne
 
         if (btcMempoolRecord) {
           const { txid } = btcMempoolRecord;
-          const blnValidated = await near.incrementRedemptionBtcTxnHashVerifiedCount(
-            redemption.txn_hash,
-            txid
-          );
+          const blnValidated =
+            await near.incrementRedemptionBtcTxnHashVerifiedCount(
+              redemption.txn_hash,
+              txid
+            );
 
           if (blnValidated) {
             console.log(`BTC Txn Hash ${txid} validated.`);
@@ -230,4 +240,7 @@ async function ValidateAtlasBtcRedemptionsBtcTxnHash(redemptions, btcMempool, ne
   }
 }
 
-module.exports = { ValidateAtlasBtcRedemptions, ValidateAtlasBtcRedemptionsBtcTxnHash };
+module.exports = {
+  ValidateAtlasBtcRedemptions,
+  ValidateAtlasBtcRedemptionsBtcTxnHash,
+};
