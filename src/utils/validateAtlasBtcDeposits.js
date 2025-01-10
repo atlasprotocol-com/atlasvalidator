@@ -119,13 +119,16 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
       flagsBatch.ValidateAtlasBtcDepositsMintedTxnHashRunning = true;
 
       const { DEPOSIT_STATUS, NETWORK_TYPE } = getConstants();
-      const allDepositsToValidate = deposits.filter(
-        (deposit) =>
+      const allDepositsToValidate = deposits.filter((deposit) => {
+        const chainConfig = getChainConfig(deposit.receiving_chain_id);
+        const validatorThreshold = chainConfig.validators_threshold;
+        return (
           deposit.status === DEPOSIT_STATUS.DEP_BTC_PENDING_MINTED_INTO_ABTC &&
           deposit.remarks === "" &&
           deposit.minted_txn_hash_verified_count < validatorThreshold &&
           deposit.minted_txn_hash
-      );
+        );
+      });
 
       if (allDepositsToValidate.length === 0) {
         console.log("No deposits to validate.");
