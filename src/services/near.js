@@ -67,6 +67,7 @@ class Near {
           "get_first_valid_deposit_chain_config",
           "get_chain_ids_by_validator_and_network_type",
           "get_first_valid_redemption",
+          "is_production_mode",
         ],
         changeMethods: [
           "insert_deposit_btc",
@@ -377,7 +378,17 @@ class Near {
     });
   }
 
+  async incrementRedemptionBtcTxnHashVerifiedCount(txn_hash, btc_txn_hash) {
+    return this.makeNearRpcChangeCall("increment_redemption_btc_txn_hash_verified_count", {
+      txn_hash: txn_hash,
+      btc_txn_hash: btc_txn_hash,
+    });
+  }
 
+  async isProductionMode() {
+    return this.makeNearRpcViewCall("is_production_mode", {});
+  }
+  
   async createMintaBtcSignedTx(payloadHeader) {
     return this.makeNearRpcChangeCall("create_mint_abtc_signed_tx", {
       btc_txn_hash: payloadHeader.btc_txn_hash,
@@ -707,6 +718,7 @@ class Near {
     }
     return events;
   }
+
 }
 
 module.exports = { Near };
