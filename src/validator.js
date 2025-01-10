@@ -6,6 +6,7 @@ const {
 } = require("./utils/validateAtlasBtcDeposits");
 const {
   ValidateAtlasBtcRedemptions,
+  ValidateAtlasBtcRedemptionsBtcTxnHash,
 } = require("./utils/validateAtlasBtcRedemptions");
 const {
   fetchAndSetChainConfigs,
@@ -103,6 +104,9 @@ async function continuousValidation() {
 
       // Validate redemptions
       await ValidateAtlasBtcRedemptions(redemptions, near);
+
+      // Validate BTC transaction hashes for redemptions
+      await ValidateAtlasBtcRedemptionsBtcTxnHash(redemptions, btcMempool, near);
 
       // Sleep for a while before the next iteration
     } catch (error) {

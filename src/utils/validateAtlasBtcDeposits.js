@@ -85,6 +85,7 @@ async function ValidateAtlasBtcDeposits(
           date_created: btcMempoolTxn.status.block_time, // this field not used in validation
           verified_count: 0, // this field not used in validation
           retry_count: 0,
+          minted_txn_hash_verified_count: 0,  // this field not used in validation
           custody_txn_id: "",
         };
         console.log(btcMempoolDepositRecord);
