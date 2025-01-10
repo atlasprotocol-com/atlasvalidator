@@ -184,14 +184,14 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
             }
           }
         } else if (chainConfig.networkType === NETWORK_TYPE.NEAR) {
-          // const startBlock = await near.getBlockNumberByTimestamp(
-          //   earliestTimestamp
-          // );
-          // const endBlock = await near.getCurrentBlockNumber();
+          const startBlock = await near.getBlockNumberByTimestamp(
+            earliestTimestamp
+          );
+          const endBlock = await near.getCurrentBlockNumber();
 
           const events = await near.getPastMintEventsInBatches(
-            184493550,
-            184493560
+            startBlock,
+            endBlock
           );
 
           const matchingEvent = events.find(
