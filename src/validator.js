@@ -2,18 +2,16 @@
 
 const {
   ValidateAtlasBtcDeposits,
-  ValidateAtlasBtcDepositsMintedTxnHash,
 } = require("./utils/validateAtlasBtcDeposits");
 const {
   ValidateAtlasBtcRedemptions,
-  ValidateAtlasBtcRedemptionsBtcTxnHash,
 } = require("./utils/validateAtlasBtcRedemptions");
 const {
-  fetchAndSetChainConfigs,
-  getAllChainConfig,
-} = require("./utils/network.chain.config");
+  ValidateAtlasBtcBridgings,
+} = require("./utils/validateAtlasBtcBridgings");
+const { fetchAndSetChainConfigs } = require("./utils/network.chain.config");
 
-const { fetchAndSetConstants, getConstants } = require("./constants");
+const { fetchAndSetConstants } = require("./constants");
 
 const { Near } = require("./services/near");
 const { Bitcoin } = require("./services/bitcoin");
@@ -24,9 +22,6 @@ const config = require(process.env.ATLAS_VALIDATOR_CONFIG ||
 
 const nearConfig = config.near;
 const btcConfig = config.bitcoin;
-
-const bttcDepositAddress =
-  btcConfig.coboBtcDepositAddress || btcConfig.btcAtlasDepositAddress;
 
 const near = new Near(
   nearConfig.nodeUrl,
@@ -43,12 +38,13 @@ const bitcoin = new Bitcoin(btcConfig.btcAPI, btcConfig.btcNetwork);
 let deposits = [];
 let redemptions = [];
 let btcMempool = [];
+let bridgings = [];
 
 // Function to poll Near Atlas deposit records
 const getAllDepositHistory = async () => {
   try {
-    console.log("Fetching deposits history");
     deposits = await near.getAllDeposits();
+    console.log(`Fetching deposits history: ${deposits.length}`);
   } catch (error) {
     console.error(`Failed to fetch deposit history: ${error.message}`);
   }
@@ -57,8 +53,8 @@ const getAllDepositHistory = async () => {
 // Function to poll Near Atlas redemption records
 const getAllRedemptionHistory = async () => {
   try {
-    console.log("Fetching redemptions history");
     redemptions = await near.getAllRedemptions();
+    console.log(`Fetching redemptions history: ${redemptions.length}`);
   } catch (error) {
     console.error(`Failed to fetch redemption history: ${error.message}`);
   }
@@ -67,13 +63,24 @@ const getAllRedemptionHistory = async () => {
 // Function to poll Btc mempool records
 const getBtcMempoolRecords = async () => {
   try {
-    console.log("Fetching Btc Mempool Records");
-    btcMempool = await bitcoin.fetchTxnsByAddress(bttcDepositAddress);
+    btcMempool = await bitcoin.fetchTxnsByAddress(
+      btcConfig.btcAtlasDepositAddress
+    );
+    console.log(`Fetching mempool records: ${btcMempool.data.length}`);
   } catch (error) {
     console.error(`Failed to fetch Btc Mempool records: ${error.message}`);
   }
 };
 
+// Function to poll Near Atlas bridging records
+const getAllBridgingHistory = async () => {
+  try {
+    bridgings = await near.getAllBridgings();
+    console.log(`Fetching bridging history: ${bridgings.length}`);
+  } catch (error) {
+    console.error(`Failed to fetch bridging history: ${error.message}`);
+  }
+};
 // One-time initialization function
 async function initialize() {
   console.log("Initializing Near...");
@@ -91,23 +98,21 @@ async function continuousValidation() {
       await getAllDepositHistory();
       await getAllRedemptionHistory();
       await getBtcMempoolRecords();
+      await getAllBridgingHistory();
 
       // Validate deposits
       await ValidateAtlasBtcDeposits(
         deposits,
-        bttcDepositAddress,
+        btcConfig.btcAtlasDepositAddress,
         near,
         bitcoin
       );
 
-      // Validate minted transaction hashes
-      await ValidateAtlasBtcDepositsMintedTxnHash(deposits, near);
-
       // Validate redemptions
       await ValidateAtlasBtcRedemptions(redemptions, near);
 
-      // Validate BTC transaction hashes for redemptions
-      await ValidateAtlasBtcRedemptionsBtcTxnHash(redemptions, btcMempool, near);
+      // Validate bridgings
+      await ValidateAtlasBtcBridgings(bridgings, near);
 
       // Sleep for a while before the next iteration
     } catch (error) {

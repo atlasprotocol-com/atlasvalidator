@@ -4,6 +4,7 @@ const { FeeMarketEIP1559Transaction } = require("@ethereumjs/tx");
 const { Common } = require("@ethereumjs/common");
 const fs = require("fs");
 const path = require("path");
+const _ = require("lodash");
 
 const { getConstants } = require("../constants");
 
@@ -94,6 +95,61 @@ class Ethereum {
     return signedTransaction;
   }
 
+  async createMintBridgeABtcSignedTx(near, sender, txnHash) {
+    // Get the nonce & gas price
+    // console.log(`Getting nonce...`);
+    const nonce = await this.web3.eth.getTransactionCount(sender);
+
+    const { maxFeePerGas, maxPriorityFeePerGas } = await this.queryGasPrice();
+
+    const payloadHeader = {
+      txn_hash: txnHash,
+      nonce: Number(nonce), // Convert BigInt to Number
+      gas: Math.min(this.gasLimit, Number(maxFeePerGas)), // assuming gasLimit is a number
+      max_fee_per_gas: Number(maxFeePerGas), // Convert BigInt to Number
+      max_priority_fee_per_gas: Number(maxPriorityFeePerGas), // Convert BigInt to Number
+    };
+
+    const result = await near.createBridgingAbtcSignedTx(payloadHeader);
+
+    const signedTransaction = new Uint8Array(result);
+
+    return signedTransaction;
+  }
+  // This is a sample function for send eth transaction, Arbitrum gasLimit set to 5 million
+  async createSendEthPayload(sender, receiver, amount) {
+    const common = new Common({ chain: this.chainID });
+
+    // Get the nonce & gas price
+    const nonce = await this.web3.eth.getTransactionCount(sender);
+    console.log(`Nonce: ${nonce}`);
+
+    const { maxFeePerGas, maxPriorityFeePerGas } = await this.queryGasPrice();
+    console.log(`maxFeePerGas: ${maxFeePerGas}`);
+    console.log(`maxPriorityFeePerGas: ${maxPriorityFeePerGas}`);
+
+    // Construct transaction
+    const transactionData = {
+      nonce,
+      gasLimit: 5000000, // 5 million
+      maxFeePerGas,
+      maxPriorityFeePerGas,
+      to: receiver,
+      value: BigInt(this.web3.utils.toWei(amount, "ether")),
+      chain: this.chainID,
+    };
+
+    console.log(transactionData);
+
+    const transaction = FeeMarketEIP1559Transaction.fromTxData(
+      transactionData,
+      { common }
+    );
+    const payload = transaction.getHashedMessageToSign();
+
+    return { transaction, payload };
+  }
+
   // This code can be used to actually relay the transaction to the Ethereum network
   async relayTransaction(signedTransaction) {
     const serializedTx = bytesToHex(signedTransaction);
@@ -150,8 +206,22 @@ class Ethereum {
     );
   }
 
+  // Function to get past events in batches
+  // TO-DO: Create indexer so do not need to fetch all Burn Events for every run
+  async getPastBurnBridgingEventsInBatches(startBlock, endBlock, batchSize) {
+    console.log(`Fetching Events in batches... ${startBlock} -> ${endBlock}`);
+
+    return this._scanEvents(
+      EVENT_NAME.BURN_BRIDGE,
+      startBlock,
+      endBlock,
+      batchSize
+    );
+  }
+
   async getPastMintEventsInBatches(startBlock, endBlock, batchSize) {
-    console.log(`Fetching Mint events in batches... ${startBlock} -> ${endBlock}`);
+    console.log(`Fetching Events in batches... ${startBlock} -> ${endBlock}`);
+
     return this._scanEvents(
       EVENT_NAME.MINT_DEPOSIT,
       startBlock,
@@ -160,58 +230,58 @@ class Ethereum {
     );
   }
 
-  async _scanEvents(eventName, startBlock, endBlock, batchSize, wallet) {
-    let fromBlock = BigInt(startBlock);
-    let toBlock;
-    let allEvents = [];
+  async getPastMintBridgeEventsInBatches(startBlock, endBlock, batchSize) {
+    console.log(`Fetching Events in batches... ${startBlock} -> ${endBlock}`);
 
-    //console.log(`getPastEventsInBatches: Start block ${startBlock}`);
-    //console.log(`getPastEventsInBatches: End block ${endBlock}`);
-    while (fromBlock < endBlock) {
-      toBlock = fromBlock + BigInt(batchSize) - 1n;
-      if (toBlock > endBlock) {
-        toBlock = endBlock; // Ensure toBlock does not exceed endBlock
-      }
+    return this._scanEvents(
+      EVENT_NAME.MINT_BRIDGE,
+      startBlock,
+      endBlock,
+      batchSize
+    );
+  }
 
-      console.log(
-        `${eventName} ------------ ${fromBlock} -> ${toBlock} | ${batchSize}`
-      );
+  async _scanEvents(
+    eventName,
+    startBlock,
+    endBlock,
+    batchSize,
+    wallet,
+    concurrency = 1
+  ) {
+    const ranges = _.range(Number(startBlock), Number(endBlock), batchSize);
 
-      try {
-        const filters = {
-          fromBlock: fromBlock,
-          toBlock: toBlock,
-        };
-        // wallet is indexed so we can filter by wallet
-        if (wallet) filters.wallet = wallet;
-
-        const events = await this.abtcContract.getPastEvents(
-          eventName,
-          filters
-        );
-
-        allEvents = allEvents.concat(events);
-        //console.log(`Fetched events from blocks ${fromBlock} to ${toBlock}`);
-      } catch (error) {
-        if (error.message.includes("Block range is too large")) {
-          console.log(
-            `[${eventName}] Block range is too large | toBlock:${toBlock} -> toBlock:${Math.round(
-              Number(toBlock) / 2
-            )}`
-          );
-          toBlock = BigInt(Math.round(Number(toBlock) / 2));
-          continue;
-        }
-
-        throw new Error(
-          `[${eventName}] Error: fetching events from blocks ${fromBlock} to ${toBlock}: ${error}`
-        );
-      }
-
-      fromBlock = toBlock + 1n;
+    const items = [];
+    for (let i = 0; i < ranges.length; i += 1) {
+      items.push({
+        from: ranges[i],
+        to: Math.min(ranges[i] + batchSize - 1, Number(endBlock)),
+      });
     }
-    //console.log(`allEvents.length: ${allEvents.length}`);
-    return allEvents;
+
+    const events = [];
+
+    const chunk = _.chunk(items, concurrency);
+    for (let i = 0; i < chunk.length; i++) {
+      const found = await Promise.all(
+        chunk[i].map(async (x) => {
+          console.log(`---------- ${eventName}: ${x.from} -> ${x.to}`);
+          const filters = { fromBlock: BigInt(x.from), toBlock: BigInt(x.to) };
+          // wallet is indexed so we can filter by wallet
+          if (wallet) filters.wallet = wallet;
+
+          const items = await this.abtcContract.getPastEvents(
+            eventName,
+            filters
+          );
+
+          return items;
+        })
+      );
+      events.push(..._.flatten(found));
+    }
+
+    return events;
   }
 
   // Request Signature to MPC

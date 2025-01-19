@@ -1,18 +1,17 @@
 {
   "near": {
     "networkId": "testnet",
-    "nodeUrl": "https://rpc.testnet.near.org",
+    "nodeUrl": "https://rpc.testnet.fastnear.com",
     "walletUrl": "https://wallet.testnet.near.org",
     "helperUrl": "https://helper.testnet.near.org",
     "explorerUrl": "https://explorer.testnet.near.org",
     "gas": "300000000000000",
-    "contractId": "atlas_audit.velar.testnet",
+    "contractId": "contract-id",
     "accountId": "account-id",
-    "pk": "private-key"
+    "pk": "private-key"      
   },
   "bitcoin": {
-    "btcAtlasDepositAddress": "tb1qa63wczgws2szu234c74shlxd9zcap7sw2hff86",
-    "coboBtcDepositAddress": "",
+    "btcAtlasDepositAddress": "tb1qwn7x9qdjtftldxnl08dg8425zf04f94eltxwym",
     "btcAPI": "https://mempool.space/signet/api",
     "btcNetwork": "signet"
   }

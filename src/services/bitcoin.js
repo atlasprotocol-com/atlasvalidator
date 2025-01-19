@@ -145,6 +145,7 @@ class Bitcoin {
     let chain = null;
     let address = null;
     let remarks = "";
+    let yieldProviderGasFee = 0;
 
     try {
       for (const vout of txn.vout) {
@@ -152,8 +153,9 @@ class Bitcoin {
         const chunks = bitcoin.script.decompile(scriptPubKey);
         if (chunks[0] === bitcoin.opcodes.OP_RETURN) {
           const embeddedData = chunks[1].toString("utf-8");
-          [chain, address] = embeddedData.split(",");
-          return { chain, address, remarks };
+           [chain, address, yieldProviderGasFee] = embeddedData.split(",");
+          
+          return { chain, address, yieldProviderGasFee: Number(yieldProviderGasFee), remarks };
         }
       }
 
@@ -161,7 +163,7 @@ class Bitcoin {
     } catch (error) {
       remarks = `Error from retrieveOpReturnFromTxnHash: ${error.message}`;
       //console.error(remarks);
-      return { chain, address, remarks };
+      return { chain, address, yieldProviderGasFee: Number(yieldProviderGasFee), remarks };
     }
   }
 

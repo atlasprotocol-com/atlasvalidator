@@ -13,7 +13,7 @@ Installation
 Clone the repository:
 
 ```bash
-git clone https://github.com/atlasprotocol-com/atlasvalidator.git
+git clone https://github.com/atlasprotocolxyz/atlasvalidator.git
 cd atlasvalidator
 ```
 
@@ -41,7 +41,7 @@ The configuration file config/config.json needs to be set up correctly for the v
     "pk": "private-key"
   },
   "bitcoin": {
-    "btcAtlasDepositAddress": "tb1qa63wczgws2szu234c74shlxd9zcap7sw2hff86",
+    "btcAtlasDepositAddress": "tb1qwn7x9qdjtftldxnl08dg8425zf04f94eltxwym",
     "btcAPI": "https://mempool.space/signet/api",
     "btcNetwork": "signet"
   }

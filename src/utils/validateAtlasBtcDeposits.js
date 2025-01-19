@@ -1,8 +1,7 @@
 const { getConstants } = require("../constants");
-const { Ethereum } = require("../services/ethereum");
 
 const { getChainConfig } = require("./network.chain.config");
-const { flagsBatch } = require("./batchFlags");
+const { flagsBatch, blockRange } = require("./batchFlags");
 
 // VALIDATOR BATCH FOR BTC DEPOSITS:
 async function ValidateAtlasBtcDeposits(
@@ -53,6 +52,7 @@ async function ValidateAtlasBtcDeposits(
           chain: receivingChainID,
           address: receivingAddress,
           remarks: remarks,
+          yieldProviderGasFee
         } = await bitcoin.getChainAndAddressFromTxnHash(btcMempoolTxn);
         let btcAmount = 0;
         let mintedTxnHash = "";
@@ -76,17 +76,15 @@ async function ValidateAtlasBtcDeposits(
           btc_sender_address: btcSenderAddress,
           receiving_chain_id: receivingChainID,
           receiving_address: receivingAddress,
-          btc_amount: btcAmount + nearTxn.fee_amount,
-          fee_amount: nearTxn.fee_amount,
+          btc_amount: btcAmount - yieldProviderGasFee,
           minted_txn_hash: mintedTxnHash,
           timestamp: btcMempoolTxn.status.block_time,
           status: btcStatus,
           remarks: remarks,
           date_created: btcMempoolTxn.status.block_time, // this field not used in validation
-          verified_count: 0, // this field not used in validation
-          retry_count: 0,
-          minted_txn_hash_verified_count: 0, // this field not used in validation
-          custody_txn_id: "",
+          verified_count: 0,                               // this field not used in validation
+          yield_provider_gas_fee: yieldProviderGasFee,
+          yield_provider_txn_hash: ""
         };
         console.log(btcMempoolDepositRecord);
 
@@ -108,123 +106,4 @@ async function ValidateAtlasBtcDeposits(
   }
 }
 
-async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
-  const batchName = `Validator Batch ValidateAtlasBtcDepositsMintedTxnHash`;
-
-  if (flagsBatch.ValidateAtlasBtcDepositsMintedTxnHashRunning) {
-    console.log(`Previous ${batchName} incomplete. Will skip this run.`);
-    return;
-  } else {
-    try {
-      console.log(`${batchName}. Start run ...`);
-      flagsBatch.ValidateAtlasBtcDepositsMintedTxnHashRunning = true;
-
-      const { DEPOSIT_STATUS, NETWORK_TYPE } = getConstants();
-      const allDepositsToValidate = deposits.filter((deposit) => {
-        const chainConfig = getChainConfig(deposit.receiving_chain_id);
-        const validatorThreshold = chainConfig.validators_threshold;
-        return (
-          deposit.status === DEPOSIT_STATUS.BTC_PENDING_MINTED_INTO_ABTC &&
-          deposit.remarks === "" &&
-          deposit.minted_txn_hash_verified_count < validatorThreshold &&
-          deposit.minted_txn_hash
-        );
-      });
-
-      if (allDepositsToValidate.length === 0) {
-        console.log("No deposits to validate.");
-        return;
-      }
-
-      // Find the earliest timestamp in the deposits
-      const earliestTimestamp = Math.min(
-        ...allDepositsToValidate.map((deposit) => deposit.timestamp)
-      );
-
-      for (const deposit of allDepositsToValidate) {
-        const chainConfig = getChainConfig(deposit.receiving_chain_id);
-        if (chainConfig.networkType === NETWORK_TYPE.EVM) {
-          const ethereum = new Ethereum(
-            chainConfig.chainID,
-            chainConfig.chainRpcUrl,
-            chainConfig.gasLimit,
-            chainConfig.aBTCAddress,
-            chainConfig.abiPath
-          );
-
-          const startBlock = await ethereum.getBlockNumberByTimestamp(
-            earliestTimestamp
-          );
-          const endBlock = await ethereum.getCurrentBlockNumber();
-          const batchSize = chainConfig.batchSize;
-
-          const events = await ethereum.getPastMintEventsInBatches(
-            startBlock,
-            endBlock,
-            batchSize
-          );
-
-          const matchingEvent = events.find(
-            (event) => event.returnValues.btcTxnHash === deposit.btc_txn_hash
-          );
-
-          if (matchingEvent) {
-            const { transactionHash } = matchingEvent;
-            const { btcTxnHash } = matchingEvent.returnValues;
-            let blnValidated =
-              await near.incrementDepositMintedTxnHashVerifiedCount(
-                btcTxnHash,
-                transactionHash
-              );
-
-            if (blnValidated) {
-              console.log(
-                `BTC Txn Hash ${btcTxnHash} with Minted Txn Hash ${transactionHash} on chain ID ${deposit.receiving_chain_id} Validated.`
-              );
-            }
-          }
-        } else if (chainConfig.networkType === NETWORK_TYPE.NEAR) {
-          const startBlock = await near.getBlockNumberByTimestamp(
-            earliestTimestamp
-          );
-          const endBlock = await near.getCurrentBlockNumber();
-
-          const events = await near.getPastMintEventsInBatches(
-            startBlock,
-            endBlock
-          );
-
-          const matchingEvent = events.find(
-            (event) => event.btcTxnHash === deposit.btc_txn_hash
-          );
-
-          if (matchingEvent) {
-            const { btcTxnHash, transactionHash } = matchingEvent;
-            let blnValidated =
-              await near.incrementDepositMintedTxnHashVerifiedCount(
-                btcTxnHash,
-                transactionHash
-              );
-
-            if (blnValidated) {
-              console.log(
-                `BTC Txn Hash ${btcTxnHash} with Minted Txn Hash ${transactionHash} on chain ID ${deposit.receiving_chain_id} Validated.`
-              );
-            }
-          }
-        }
-      }
-
-      console.log(`${batchName} completed successfully.`);
-    } catch (error) {
-      console.error(`Error ${batchName}:`, error);
-    } finally {
-      flagsBatch.ValidateAtlasBtcDepositsMintedTxnHashRunning = false;
-    }
-  }
-}
-
-module.exports = {
-  ValidateAtlasBtcDeposits,
-  ValidateAtlasBtcDepositsMintedTxnHash,
-};
+module.exports = { ValidateAtlasBtcDeposits };

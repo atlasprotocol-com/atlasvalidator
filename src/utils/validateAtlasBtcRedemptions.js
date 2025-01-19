@@ -4,7 +4,7 @@ const { getConstants } = require("../constants");
 const { Ethereum } = require("../services/ethereum");
 
 const { getChainConfig } = require("./network.chain.config");
-const { flagsBatch } = require("./batchFlags");
+const { flagsBatch, blockRange } = require("./batchFlags");
 
 async function ValidateAtlasBtcRedemptions(redemptions, near) {
   const batchName = `Validator Batch ValidateAtlasBtcRedemptions`;
@@ -58,12 +58,18 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
           const startBlock = await ethereum.getBlockNumberByTimestamp(
             earliestTimestamp
           );
+          const endBlock = Math.min(
+            Number(await ethereum.getCurrentBlockNumber()),
+            Number(startBlock) + 500
+          );
+          console.log(
+            `${batchName}  chainID:${chainConfig.chainID} - startBlock: ${startBlock} endBlock:${endBlock}`
+          );
 
-          const endBlock = await ethereum.getCurrentBlockNumber();
           const events = await ethereum.getPastBurnEventsInBatches(
-            startBlock,
-            endBlock,
-            chainConfig.batchSize
+            Number(startBlock) - 100,
+            Number(endBlock),
+            blockRange(Number(chainConfig.batchSize))
           );
 
           console.log(
@@ -103,10 +109,11 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
               remarks: "",
               date_created: timestamp, // this field not used in validation
               verified_count: 0,
-              btc_txn_hash_verified_count: 0,
-              custody_txn_id: "",
+              yield_provider_gas_fee: 0,
+              yield_provider_txn_hash: "",
             };
 
+            console.log(record);
             let blnValidated = await near.incrementRedemptionVerifiedCount(
               record
             );
@@ -119,14 +126,18 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
           const startBlock = await near.getBlockNumberByTimestamp(
             earliestTimestamp
           );
-          console.log("startBlock: " + startBlock);
 
-          const currentBlock = await near.getCurrentBlockNumber();
-          console.log("endBlock: " + currentBlock);
+          const endBlock = Math.min(
+            Number(await near.getCurrentBlockNumber()),
+            Number(startBlock + 10)
+          );
+          console.log(
+            `${batchName}  chainID:${chainConfig.chainID} - startBlock: ${startBlock} endBlock:${endBlock}`
+          );
 
           const events = await near.getPastBurnRedemptionEventsInBatches(
-            startBlock - 5,
-            currentBlock,
+            startBlock - 100,
+            endBlock,
             chainConfig.aBTCAddress
           );
 
@@ -157,8 +168,8 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
               remarks: "",
               date_created: timestamp, // this field not used in validation
               verified_count: 0,
-              btc_txn_hash_verified_count: 0, // this field not used in validation
-              custody_txn_id: "",
+              yield_provider_gas_fee: 0,
+              yield_provider_txn_hash: "",
             };
 
             let blnValidated = await near.incrementRedemptionVerifiedCount(
@@ -181,66 +192,4 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
   }
 }
 
-async function ValidateAtlasBtcRedemptionsBtcTxnHash(
-  redemptions,
-  btcMempool,
-  near
-) {
-  const batchName = `Validator Batch ValidateAtlasBtcRedemptionsBtcTxnHash`;
-
-  if (flagsBatch.ValidateAtlasBtcRedemptionsBtcTxnHashRunning) {
-    console.log(`Previous ${batchName} incomplete. Will skip this run.`);
-    return;
-  } else {
-    try {
-      console.log(`${batchName}. Start run ...`);
-      flagsBatch.ValidateAtlasBtcRedemptionsBtcTxnHashRunning = true;
-
-      const isProductionMode = await near.isProductionMode();
-      const { REDEMPTION_STATUS, NETWORK_TYPE } = getConstants();
-      const chainConfig = getChainConfig(
-        isProductionMode ? NETWORK_TYPE.BITCOIN : NETWORK_TYPE.SIGNET
-      );
-      let validatorThreshold = chainConfig.validators_threshold;
-
-      const allRedemptionsToValidate = redemptions.filter(
-        (redemption) =>
-          redemption.status ===
-            REDEMPTION_STATUS.BTC_PENDING_MEMPOOL_CONFIRMATION &&
-          redemption.btc_txn_hash &&
-          redemption.remarks === "" &&
-          redemption.btc_txn_hash_verified_count < validatorThreshold
-      );
-
-      for (const redemption of allRedemptionsToValidate) {
-        const btcMempoolRecord = btcMempool.find(
-          (record) => record.txid === redemption.btc_txn_hash
-        );
-
-        if (btcMempoolRecord) {
-          const { txid } = btcMempoolRecord;
-          const blnValidated =
-            await near.incrementRedemptionBtcTxnHashVerifiedCount(
-              redemption.txn_hash,
-              txid
-            );
-
-          if (blnValidated) {
-            console.log(`BTC Txn Hash ${txid} validated.`);
-          }
-        }
-      }
-
-      console.log(`${batchName} completed successfully.`);
-    } catch (error) {
-      console.error(`Error ${batchName}:`, error);
-    } finally {
-      flagsBatch.ValidateAtlasBtcRedemptionsBtcTxnHashRunning = false;
-    }
-  }
-}
-
-module.exports = {
-  ValidateAtlasBtcRedemptions,
-  ValidateAtlasBtcRedemptionsBtcTxnHash,
-};
+module.exports = { ValidateAtlasBtcRedemptions };

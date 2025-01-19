@@ -67,7 +67,9 @@ class Near {
           "get_first_valid_deposit_chain_config",
           "get_chain_ids_by_validator_and_network_type",
           "get_first_valid_redemption",
-          "is_production_mode",
+          "get_bridging_by_txn_hash",
+          "get_all_bridgings",
+          "get_first_valid_bridging_chain_config",
         ],
         changeMethods: [
           "insert_deposit_btc",
@@ -80,8 +82,8 @@ class Near {
           "update_redemption_remarks",
           "update_redemption_btc_txn_hash",
           "increment_deposit_verified_count",
-          "increment_deposit_minted_txn_hash_verified_count",
           "increment_redemption_verified_count",
+          "increment_bridging_verified_count",
           "create_mint_abtc_signed_tx",
           "update_deposit_minted",
           "update_deposit_btc_deposited",
@@ -90,6 +92,12 @@ class Near {
           "update_redemption_start",
           "update_redemption_pending_btc_mempool",
           "update_redemption_redeemed",
+          "insert_bridging_abtc",
+          "update_bridging_status",
+          "update_bridging_btc_bridged",
+          "update_bridging_remarks",
+          "create_bridging_abtc_signed_tx",
+          "update_bridging_minted",
           "update_redemption_custody_txn_id",
         ],
       });
@@ -166,6 +174,17 @@ class Near {
   // Function to get all redemptions from NEAR contract
   async getAllRedemptions() {
     return this.makeNearRpcViewCall("get_all_redemptions", {});
+  }
+
+  // Function to get all redemptions from NEAR contract
+  async getAllBridgings() {
+    return this.makeNearRpcViewCall("get_all_bridgings", {});
+  }
+
+  async getBridgingByTxnHash(transactionHash) {
+    return this.makeNearRpcViewCall("get_bridging_by_txn_hash", {
+      txn_hash: transactionHash,
+    });
   }
 
   async getRedemptionByTxnHash(transactionHash) {
@@ -365,30 +384,18 @@ class Near {
     });
   }
 
-  async incrementDepositMintedTxnHashVerifiedCount(btcTxnHash, transactionHash) {
-    return this.makeNearRpcChangeCall("increment_deposit_minted_txn_hash_verified_count", {
-      btc_txn_hash: btcTxnHash,
-      minted_txn_hash: transactionHash,
-    });
-  }
-
   async incrementRedemptionVerifiedCount(evmMempoolRedemptionRecord) {
     return this.makeNearRpcChangeCall("increment_redemption_verified_count", {
       mempool_redemption: evmMempoolRedemptionRecord,
     });
   }
 
-  async incrementRedemptionBtcTxnHashVerifiedCount(txn_hash, btc_txn_hash) {
-    return this.makeNearRpcChangeCall("increment_redemption_btc_txn_hash_verified_count", {
-      txn_hash: txn_hash,
-      btc_txn_hash: btc_txn_hash,
+  async incrementBridgingVerifiedCount(evmMempoolBridgingRecord) {
+    return this.makeNearRpcChangeCall("increment_bridging_verified_count", {
+      mempool_bridging: evmMempoolBridgingRecord,
     });
   }
 
-  async isProductionMode() {
-    return this.makeNearRpcViewCall("is_production_mode", {});
-  }
-  
   async createMintaBtcSignedTx(payloadHeader) {
     return this.makeNearRpcChangeCall("create_mint_abtc_signed_tx", {
       btc_txn_hash: payloadHeader.btc_txn_hash,
@@ -619,6 +626,200 @@ class Near {
     return events;
   }
 
+  async getPastMintBridgeEventsInBatches(startBlock, endBlock) {
+    const mintEvents = [];
+    const targetContractId = this.contract_id;
+
+    for (let blockHeight = startBlock; blockHeight <= endBlock; blockHeight++) {
+      try {
+        const block = await this.provider.block({ blockId: blockHeight });
+        for (const chunk of block.chunks) {
+          if (chunk.tx_root === Near.TRANSACTION_ROOT) {
+            //console.log(`No transactions in chunk ${chunk.chunk_hash}`);
+            continue;
+          }
+
+          // Fetch the chunk using the chunk_hash
+          const chunkData = await this.provider.chunk(chunk.chunk_hash);
+          const transactions = chunkData.transactions;
+
+          const txnCount = (transactions && transactions.length) || 0;
+          if (txnCount === 0) {
+            //console.warn(`No transactions found in chunk ${chunk.chunk_hash}`);
+            continue;
+          }
+
+          for (const tx of transactions) {
+            // console.log(`Processing transaction ${tx.hash} in block ${blockHeight}`);
+            // Skip transactions that are not from the target contract address
+            if (tx.receiver_id !== targetContractId) {
+              continue;
+            }
+
+            const txResult = await this.provider.txStatus(
+              tx.hash,
+              tx.signer_id
+            );
+
+            // Loop through the receipts_outcome array to find logs with 'ft_mint_bridge' event
+            const receipt = txResult.receipts_outcome.find((outcome) =>
+              outcome.outcome.logs.some((log) => {
+                try {
+                  // Parse the log and check if it contains the "ft_mint_bridge" event
+                  const event = JSON.parse(log.replace("EVENT_JSON:", ""));
+                  return event.event === "ft_mint_bridge";
+                } catch (e) {
+                  return false; // In case log is not a JSON string
+                }
+              })
+            );
+
+            if (receipt && receipt.outcome.status.SuccessValue === "") {
+              // Extract the log containing the JSON event
+              const logEntry = receipt.outcome.logs.find((log) => {
+                try {
+                  const event = JSON.parse(log.replace("EVENT_JSON:", ""));
+                  return event.event === "ft_mint_bridge";
+                } catch (e) {
+                  return false;
+                }
+              });
+
+              if (logEntry) {
+                // Parse the JSON from the log entry
+                const event = JSON.parse(logEntry.replace("EVENT_JSON:", ""));
+
+                // Extract the memo field from the event data and parse it
+                const memo = JSON.parse(event.data[0].memo);
+                const address = memo.address;
+                const originChainId = memo.originChainId;
+                const originChainAddress = memo.originChainAddress;
+                const originTxnHash = memo.originTxnHash;
+                const transactionHash = txResult.transaction.hash;
+
+                mintEvents.push({
+                  address,
+                  originChainId,
+                  originChainAddress,
+                  originTxnHash,
+                  transactionHash,
+                  timestamp: block.header.timestamp,
+                });
+
+                console.log(
+                  `Found mint event with originTxnHash: ${originTxnHash} and transactionHash: ${transactionHash}`
+                );
+                return mintEvents;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error(`${blockHeight} - ${err}`);
+        continue;
+      }
+    }
+    return mintEvents;
+  }
+
+  async getPastBurnBridgingEventsInBatches(startBlock, endBlock, aBTCAddress) {
+    const events = [];
+    const targetContractId = aBTCAddress;
+
+    for (let blockHeight = startBlock; blockHeight <= endBlock; blockHeight++) {
+      try {
+        const block = await this.provider.block({ blockId: blockHeight });
+        for (const chunk of block.chunks) {
+          if (chunk.tx_root === Near.TRANSACTION_ROOT) {
+            //console.log(`No transactions in chunk ${chunk.chunk_hash}`);
+            continue;
+          }
+
+          // Fetch the chunk using the chunk_hash
+          const chunkData = await this.provider.chunk(chunk.chunk_hash);
+          const transactions = chunkData.transactions;
+
+          const txnCount = (transactions && transactions.length) || 0;
+
+          if (txnCount === 0) {
+            //console.warn(`No transactions found in chunk ${chunk.chunk_hash}`);
+            continue;
+          }
+
+          for (const tx of transactions) {
+            // console.log(`Processing transaction ${tx.hash} in block ${blockHeight}`);
+            // Skip transactions that are not from the target contract address
+            if (tx.receiver_id !== targetContractId) {
+              continue;
+            }
+
+            const txResult = await this.provider.txStatus(
+              tx.hash,
+              tx.signer_id
+            );
+
+            // Loop through the receipts_outcome array to find logs with 'ft_burn_bridge' event
+            const receipt = txResult.receipts_outcome.find((outcome) =>
+              outcome.outcome.logs.some((log) => {
+                try {
+                  // Parse the log and check if it contains the "ft_burn_bridge" event
+                  const event = JSON.parse(log.replace("EVENT_JSON:", ""));
+                  return event.event === "ft_burn_bridge";
+                } catch (e) {
+                  return false; // In case log is not a JSON string
+                }
+              })
+            );
+
+            if (receipt && receipt.outcome.status.SuccessValue === "") {
+              // Extract the log containing the JSON event
+              const logEntry = receipt.outcome.logs.find((log) => {
+                try {
+                  const event = JSON.parse(log.replace("EVENT_JSON:", ""));
+                  return event.event === "ft_burn_bridge";
+                } catch (e) {
+                  return false;
+                }
+              });
+
+              if (logEntry) {
+                // Parse the JSON from the log entry
+                const event = JSON.parse(logEntry.replace("EVENT_JSON:", ""));
+
+                // Extract the memo field from the event data and parse it
+                const memo = JSON.parse(event.data[0].memo);
+                const amount = event.data[0].amount;
+                const wallet = memo.address;
+                const destChainId = memo.destChainId;
+                const destChainAddress = memo.destChainAddress;
+                const transactionHash = txResult.transaction.hash;
+
+                events.push({
+                  returnValues: {
+                    amount,
+                    wallet,
+                    destChainId,
+                    destChainAddress,
+                  },
+                  transactionHash,
+                  blockNumber: blockHeight,
+                  timestamp: Math.floor(block.header.timestamp / 1000000000),
+                  status: true,
+                });
+
+                return events;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error(`${blockHeight} - ${err}`);
+        continue;
+      }
+    }
+    return events;
+  }
+
   async getPastBurnRedemptionEventsInBatches(
     startBlock,
     endBlock,
@@ -719,6 +920,67 @@ class Near {
     return events;
   }
 
+  async insertBridgingAbtc(record) {
+    return this.makeNearRpcChangeCall("insert_bridging_abtc", {
+      txn_hash: record.txn_hash,
+      origin_chain_id: record.origin_chain_id,
+      origin_chain_address: record.origin_chain_address,
+      dest_chain_id: record.dest_chain_id,
+      dest_chain_address: record.dest_chain_address,
+      dest_txn_hash: record.dest_txn_hash,
+      abtc_amount: record.abtc_amount,
+      timestamp: record.timestamp,
+      status: record.status,
+      remarks: record.remarks,
+      date_created: record.date_created,
+    });
+  }
+
+  async updateBridgingStatus(txnHash, status) {
+    return this.makeNearRpcChangeCall("update_bridging_status", {
+      btc_txn_hash: txnHash,
+      status: status,
+    });
+  }
+
+  async updateBridgingBtcBridged(txnHash, timestamp) {
+    return this.makeNearRpcChangeCall("update_bridging_btc_bridged", {
+      txn_hash: txnHash,
+      timestamp: timestamp,
+    });
+  }
+
+  async updateBridgingMinted(txnHash, destTxnHash, timestamp) {
+    return this.makeNearRpcChangeCall("update_bridging_minted", {
+      txn_hash: txnHash,
+      dest_txn_hash: destTxnHash,
+      timestamp: timestamp,
+    });
+  }
+
+  async updateBridgingRemarks(txnHash, remarks) {
+    return this.makeNearRpcChangeCall("update_bridging_remarks", {
+      txn_hash: txnHash,
+      remarks: remarks,
+    });
+  }
+
+  async getFirstValidBridgingChainConfig() {
+    return this.makeNearRpcChangeCall(
+      "get_first_valid_bridging_chain_config",
+      {}
+    );
+  }
+
+  async createMintBridgeABtcSignedTx(payloadHeader) {
+    return this.makeNearRpcChangeCall("create_bridging_abtc_signed_tx", {
+      txn_hash: payloadHeader.txn_hash,
+      nonce: payloadHeader.nonce,
+      gas: payloadHeader.gas,
+      max_fee_per_gas: payloadHeader.max_fee_per_gas,
+      max_priority_fee_per_gas: payloadHeader.max_priority_fee_per_gas,
+    });
+  }
 }
 
 module.exports = { Near };
