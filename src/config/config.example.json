@@ -8,10 +8,11 @@
     "gas": "300000000000000",
     "contractId": "atlas_audit.velar.testnet",
     "accountId": "account-id",
-    "pk": "private-key"      
+    "pk": "private-key"
   },
   "bitcoin": {
     "btcAtlasDepositAddress": "tb1qa63wczgws2szu234c74shlxd9zcap7sw2hff86",
+    "coboBtcDepositAddress": "",
     "btcAPI": "https://mempool.space/signet/api",
     "btcNetwork": "signet"
   }

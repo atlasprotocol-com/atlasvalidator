@@ -2,9 +2,11 @@
 
 const {
   ValidateAtlasBtcDeposits,
+  ValidateAtlasBtcDepositsMintedTxnHash,
 } = require("./utils/validateAtlasBtcDeposits");
 const {
   ValidateAtlasBtcRedemptions,
+  ValidateAtlasBtcRedemptionsBtcTxnHash,
 } = require("./utils/validateAtlasBtcRedemptions");
 const {
   fetchAndSetChainConfigs,
@@ -17,10 +19,14 @@ const { Near } = require("./services/near");
 const { Bitcoin } = require("./services/bitcoin");
 
 // Load configuration
-const config = require("./config/config.json");
+const config = require(process.env.ATLAS_VALIDATOR_CONFIG ||
+  "./config/config.json");
 
 const nearConfig = config.near;
 const btcConfig = config.bitcoin;
+
+const bttcDepositAddress =
+  btcConfig.coboBtcDepositAddress || btcConfig.btcAtlasDepositAddress;
 
 const near = new Near(
   nearConfig.nodeUrl,
@@ -62,9 +68,7 @@ const getAllRedemptionHistory = async () => {
 const getBtcMempoolRecords = async () => {
   try {
     console.log("Fetching Btc Mempool Records");
-    btcMempool = await bitcoin.fetchTxnsByAddress(
-      btcConfig.btcAtlasDepositAddress
-    );
+    btcMempool = await bitcoin.fetchTxnsByAddress(bttcDepositAddress);
   } catch (error) {
     console.error(`Failed to fetch Btc Mempool records: ${error.message}`);
   }
@@ -91,13 +95,19 @@ async function continuousValidation() {
       // Validate deposits
       await ValidateAtlasBtcDeposits(
         deposits,
-        btcConfig.btcAtlasDepositAddress,
+        bttcDepositAddress,
         near,
         bitcoin
       );
 
+      // Validate minted transaction hashes
+      await ValidateAtlasBtcDepositsMintedTxnHash(deposits, near);
+
       // Validate redemptions
       await ValidateAtlasBtcRedemptions(redemptions, near);
+
+      // Validate BTC transaction hashes for redemptions
+      await ValidateAtlasBtcRedemptionsBtcTxnHash(redemptions, btcMempool, near);
 
       // Sleep for a while before the next iteration
     } catch (error) {

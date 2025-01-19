@@ -67,6 +67,7 @@ class Near {
           "get_first_valid_deposit_chain_config",
           "get_chain_ids_by_validator_and_network_type",
           "get_first_valid_redemption",
+          "is_production_mode",
         ],
         changeMethods: [
           "insert_deposit_btc",
@@ -79,6 +80,7 @@ class Near {
           "update_redemption_remarks",
           "update_redemption_btc_txn_hash",
           "increment_deposit_verified_count",
+          "increment_deposit_minted_txn_hash_verified_count",
           "increment_redemption_verified_count",
           "create_mint_abtc_signed_tx",
           "update_deposit_minted",
@@ -363,13 +365,30 @@ class Near {
     });
   }
 
+  async incrementDepositMintedTxnHashVerifiedCount(btcTxnHash, transactionHash) {
+    return this.makeNearRpcChangeCall("increment_deposit_minted_txn_hash_verified_count", {
+      btc_txn_hash: btcTxnHash,
+      minted_txn_hash: transactionHash,
+    });
+  }
+
   async incrementRedemptionVerifiedCount(evmMempoolRedemptionRecord) {
     return this.makeNearRpcChangeCall("increment_redemption_verified_count", {
       mempool_redemption: evmMempoolRedemptionRecord,
     });
   }
 
+  async incrementRedemptionBtcTxnHashVerifiedCount(txn_hash, btc_txn_hash) {
+    return this.makeNearRpcChangeCall("increment_redemption_btc_txn_hash_verified_count", {
+      txn_hash: txn_hash,
+      btc_txn_hash: btc_txn_hash,
+    });
+  }
 
+  async isProductionMode() {
+    return this.makeNearRpcViewCall("is_production_mode", {});
+  }
+  
   async createMintaBtcSignedTx(payloadHeader) {
     return this.makeNearRpcChangeCall("create_mint_abtc_signed_tx", {
       btc_txn_hash: payloadHeader.btc_txn_hash,
@@ -699,6 +718,7 @@ class Near {
     }
     return events;
   }
+
 }
 
 module.exports = { Near };
