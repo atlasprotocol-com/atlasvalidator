@@ -109,11 +109,12 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
               remarks: "",
               date_created: timestamp, // this field not used in validation
               verified_count: 0,
+              btc_txn_hash_verified_count: 0,
+              custody_txn_id: "",
               yield_provider_gas_fee: 0,
               yield_provider_txn_hash: "",
             };
 
-            console.log(record);
             let blnValidated = await near.incrementRedemptionVerifiedCount(
               record
             );
