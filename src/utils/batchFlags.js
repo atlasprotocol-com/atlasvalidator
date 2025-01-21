@@ -2,6 +2,7 @@
 const flagsBatch = {
   UpdateAtlasBtcDepositsRunning: false,
   ValidateAtlasBtcDepositsRunning: false,
+  ValidateAtlasBtcDepositsMintedTxnHashRunning: false,
   MintaBtcToReceivingChainRunning: false,
   UpdateAtlasAbtcMintedRunning: false,
   UpdateAtlasBtcRedemptionsRunning: false,
