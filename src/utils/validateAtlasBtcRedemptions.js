@@ -193,4 +193,66 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
   }
 }
 
-module.exports = { ValidateAtlasBtcRedemptions };
+async function ValidateAtlasBtcRedemptionsBtcTxnHash(
+  redemptions,
+  btcMempool,
+  near
+) {
+  const batchName = `Validator Batch ValidateAtlasBtcRedemptionsBtcTxnHash`;
+
+  if (flagsBatch.ValidateAtlasBtcRedemptionsBtcTxnHashRunning) {
+    console.log(`Previous ${batchName} incomplete. Will skip this run.`);
+    return;
+  } else {
+    try {
+      console.log(`${batchName}. Start run ...`);
+      flagsBatch.ValidateAtlasBtcRedemptionsBtcTxnHashRunning = true;
+
+      const isProductionMode = await near.isProductionMode();
+      const { REDEMPTION_STATUS, NETWORK_TYPE } = getConstants();
+      const chainConfig = getChainConfig(
+        isProductionMode ? NETWORK_TYPE.BITCOIN : NETWORK_TYPE.SIGNET
+      );
+      let validatorThreshold = chainConfig.validators_threshold;
+
+      const allRedemptionsToValidate = redemptions.filter(
+        (redemption) =>
+          redemption.status ===
+            REDEMPTION_STATUS.BTC_PENDING_MEMPOOL_CONFIRMATION &&
+          redemption.btc_txn_hash &&
+          redemption.remarks === "" &&
+          redemption.btc_txn_hash_verified_count < validatorThreshold
+      );
+
+      for (const redemption of allRedemptionsToValidate) {
+        const btcMempoolRecord = btcMempool.find(
+          (record) => record.txid === redemption.btc_txn_hash
+        );
+
+        if (btcMempoolRecord) {
+          const { txid } = btcMempoolRecord;
+          const blnValidated =
+            await near.incrementRedemptionBtcTxnHashVerifiedCount(
+              redemption.txn_hash,
+              txid
+            );
+
+          if (blnValidated) {
+            console.log(`BTC Txn Hash ${txid} validated.`);
+          }
+        }
+      }
+
+      console.log(`${batchName} completed successfully.`);
+    } catch (error) {
+      console.error(`Error ${batchName}:`, error);
+    } finally {
+      flagsBatch.ValidateAtlasBtcRedemptionsBtcTxnHashRunning = false;
+    }
+  }
+}
+
+module.exports = {
+  ValidateAtlasBtcRedemptions,
+  ValidateAtlasBtcRedemptionsBtcTxnHash,
+};
