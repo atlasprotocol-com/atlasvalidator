@@ -70,6 +70,7 @@ class Near {
           "get_bridging_by_txn_hash",
           "get_all_bridgings",
           "get_first_valid_bridging_chain_config",
+          "is_production_mode",
         ],
         changeMethods: [
           "insert_deposit_btc",
@@ -82,6 +83,7 @@ class Near {
           "update_redemption_remarks",
           "update_redemption_btc_txn_hash",
           "increment_deposit_verified_count",
+          "increment_deposit_minted_txn_hash_verified_count",
           "increment_redemption_verified_count",
           "increment_bridging_verified_count",
           "create_mint_abtc_signed_tx",
@@ -197,6 +199,19 @@ class Near {
     return this.makeNearRpcViewCall("get_deposit_by_btc_txn_hash", {
       btc_txn_hash: transactionHash,
     });
+  }
+
+  async incrementDepositMintedTxnHashVerifiedCount(
+    btcTxnHash,
+    transactionHash
+  ) {
+    return this.makeNearRpcChangeCall(
+      "increment_deposit_minted_txn_hash_verified_count",
+      {
+        btc_txn_hash: btcTxnHash,
+        minted_txn_hash: transactionHash,
+      }
+    );
   }
 
   async getChainConfigs() {
@@ -980,6 +995,20 @@ class Near {
       max_fee_per_gas: payloadHeader.max_fee_per_gas,
       max_priority_fee_per_gas: payloadHeader.max_priority_fee_per_gas,
     });
+  }
+
+  async incrementRedemptionBtcTxnHashVerifiedCount(txn_hash, btc_txn_hash) {
+    return this.makeNearRpcChangeCall(
+      "increment_redemption_btc_txn_hash_verified_count",
+      {
+        txn_hash: txn_hash,
+        btc_txn_hash: btc_txn_hash,
+      }
+    );
+  }
+
+  async isProductionMode() {
+    return this.makeNearRpcViewCall("is_production_mode", {});
   }
 }
 
