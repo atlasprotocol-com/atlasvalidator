@@ -22,11 +22,11 @@ const { Bitcoin } = require("./services/bitcoin");
 const config = require(process.env.ATLAS_VALIDATOR_CONFIG ||
   "./config/config.json");
 
-const bttcDepositAddress =
-  btcConfig.coboBtcDepositAddress || btcConfig.btcAtlasDepositAddress;
-
 const nearConfig = config.near;
 const btcConfig = config.bitcoin;
+
+const bttcDepositAddress =
+  btcConfig.coboBtcDepositAddress || btcConfig.btcAtlasDepositAddress;
 
 const near = new Near(
   nearConfig.nodeUrl,

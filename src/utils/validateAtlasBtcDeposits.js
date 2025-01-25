@@ -77,6 +77,7 @@ async function ValidateAtlasBtcDeposits(
           receiving_chain_id: receivingChainID,
           receiving_address: receivingAddress,
           btc_amount: btcAmount - yieldProviderGasFee,
+          fee_amount: 0,
           minted_txn_hash: mintedTxnHash,
           timestamp: btcMempoolTxn.status.block_time,
           status: btcStatus,
