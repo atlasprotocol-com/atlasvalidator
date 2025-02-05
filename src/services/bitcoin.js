@@ -20,7 +20,7 @@ class Bitcoin {
     //console.log(`${this.chain_rpc}/address/${address}/utxo`);
 
     const response = await axios.get(
-      `${this.chain_rpc}/address/${address}/utxo`,
+      `${this.chain_rpc}/address/${address}/utxo`
     );
     const balance = response.data.reduce((acc, utxo) => acc + utxo.value, 0);
 
@@ -73,7 +73,7 @@ class Bitcoin {
    */
   async fetchUTXOs(address) {
     const response = await axios.get(
-      `${this.chain_rpc}/address/${address}/utxo`,
+      `${this.chain_rpc}/address/${address}/utxo`
     );
 
     const utxos = response.data.map((utxo) => ({
@@ -135,7 +135,7 @@ class Bitcoin {
   // Function which returns the txn's btc amount based on receiverAddress
   async getBtcReceivingAmount(txn, receiverAddress) {
     const output = txn.vout.find(
-      (vout) => vout.scriptpubkey_address === receiverAddress,
+      (vout) => vout.scriptpubkey_address === receiverAddress
     );
     return output ? output.value : 0;
   }
@@ -146,6 +146,8 @@ class Bitcoin {
     let address = null;
     let remarks = "";
     let yieldProviderGasFee = 0;
+    let protocolFee = 0;
+    let mintingFee = 0;
 
     try {
       for (const vout of txn.vout) {
@@ -153,9 +155,18 @@ class Bitcoin {
         const chunks = bitcoin.script.decompile(scriptPubKey);
         if (chunks[0] === bitcoin.opcodes.OP_RETURN) {
           const embeddedData = chunks[1].toString("utf-8");
-           [chain, address, yieldProviderGasFee] = embeddedData.split(",");
-          
-          return { chain, address, yieldProviderGasFee: Number(yieldProviderGasFee), remarks };
+
+          [chain, address, yieldProviderGasFee, protocolFee, mintingFee] =
+            embeddedData.split(",");
+
+          return {
+            chain,
+            address,
+            yieldProviderGasFee: Number(yieldProviderGasFee),
+            protocolFee: Number(protocolFee),
+            mintingFee: Number(mintingFee),
+            remarks,
+          };
         }
       }
 
@@ -163,7 +174,12 @@ class Bitcoin {
     } catch (error) {
       remarks = `Error from retrieveOpReturnFromTxnHash: ${error.message}`;
       //console.error(remarks);
-      return { chain, address, yieldProviderGasFee: Number(yieldProviderGasFee), remarks };
+      return {
+        chain,
+        address,
+        yieldProviderGasFee: Number(yieldProviderGasFee),
+        remarks,
+      };
     }
   }
 
@@ -173,7 +189,7 @@ class Bitcoin {
     btcMempool,
     address,
     redemptionTimestamp,
-    opReturnCode,
+    opReturnCode
   ) {
     let btcTxnHash = null;
     let timestamp = null;
@@ -183,11 +199,13 @@ class Bitcoin {
       const filteredTxns = btcMempool.data.filter((txn) => {
         // Check if the transaction has any input matching the deposit address
         const hasMatchingInput = txn.vin.some(
-          (vin) => vin.prevout.scriptpubkey_address === address,
+          (vin) => vin.prevout.scriptpubkey_address === address
         );
 
         // Check if the transaction's block time is greater than the redemption time
-        const hasValidBlockTime = txn.status.block_time >= redemptionTimestamp || !txn.status.block_time;
+        const hasValidBlockTime =
+          txn.status.block_time >= redemptionTimestamp ||
+          !txn.status.block_time;
 
         // Check if the transaction has any output with the OP_RETURN data matching the provided opReturnCode
         const hasOpReturnData = txn.vout.some((vout) => {
@@ -197,7 +215,7 @@ class Bitcoin {
 
         return hasMatchingInput && hasValidBlockTime && hasOpReturnData;
       });
-      
+
       // Check if any records were found
       if (filteredTxns.length > 0) {
         const txn = filteredTxns[0];
@@ -209,7 +227,7 @@ class Bitcoin {
       return { btcTxnHash, timestamp, hasConfirmed }; // Return the hasConfirmed status
     } catch (error) {
       throw new Error(
-        `Error from getTxnHashAndTimestampFromOpReturnCode: ${error.message}`,
+        `Error from getTxnHashAndTimestampFromOpReturnCode: ${error.message}`
       );
     }
   }
@@ -238,7 +256,7 @@ class Bitcoin {
       return time;
     } catch (error) {
       throw new Error(
-        `Failed to fetch unconfirmed transactions: ${error.message}`,
+        `Failed to fetch unconfirmed transactions: ${error.message}`
       );
     }
   }

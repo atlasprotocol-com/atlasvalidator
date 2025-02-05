@@ -54,6 +54,8 @@ async function ValidateAtlasBtcDeposits(
           address: receivingAddress,
           remarks: remarks,
           yieldProviderGasFee,
+          protocolFee,
+          mintingFee,
         } = await bitcoin.getChainAndAddressFromTxnHash(btcMempoolTxn);
         let btcAmount = 0;
         let mintedTxnHash = "";
@@ -77,8 +79,10 @@ async function ValidateAtlasBtcDeposits(
           btc_sender_address: btcSenderAddress,
           receiving_chain_id: receivingChainID,
           receiving_address: receivingAddress,
-          btc_amount: btcAmount - yieldProviderGasFee,
+          btc_amount: btcAmount,
           fee_amount: 0,
+          protocol_fee: protocolFee,
+          minting_fee: mintingFee,
           minted_txn_hash: mintedTxnHash,
           timestamp: btcMempoolTxn.status.block_time,
           status: btcStatus,
