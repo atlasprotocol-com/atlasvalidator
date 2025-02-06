@@ -121,6 +121,7 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
               remarks: "",
               date_created: timestamp, // this field not used in validation
               verified_count: 0, // this field not used in validation
+              protocol_fee: 0,
             };
 
             let blnValidated = await near.incrementBridgingVerifiedCount(
