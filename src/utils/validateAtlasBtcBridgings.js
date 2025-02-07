@@ -89,7 +89,13 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
 
           for (const event of events) {
             const {
-              returnValues: { wallet, destChainId, destChainAddress, amount },
+              returnValues: {
+                wallet,
+                destChainId,
+                destChainAddress,
+                amount,
+                protocolFee,
+              },
               transactionHash,
               blockNumber,
             } = event; // Make sure blockNumber is part of the event object
@@ -116,14 +122,13 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
               dest_chain_address: destChainAddress,
               dest_txn_hash: "", // this field not used in validation
               abtc_amount: Number(amount),
+              protocol_fee: Number(protocolFee || 0),
               timestamp: timestamp,
               status: evmStatus,
               remarks: "",
               date_created: timestamp, // this field not used in validation
               verified_count: 0, // this field not used in validation
-              protocol_fee: 0,
             };
-
             let blnValidated = await near.incrementBridgingVerifiedCount(
               record
             );

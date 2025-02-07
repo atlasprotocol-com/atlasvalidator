@@ -120,7 +120,7 @@ async function continuousValidation() {
         near
       );
 
-      // Validate bridgings
+      // // Validate bridgings
       await ValidateAtlasBtcBridgings(bridgings, near);
 
       // Sleep for a while before the next iteration
