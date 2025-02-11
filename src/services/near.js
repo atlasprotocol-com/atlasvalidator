@@ -84,6 +84,7 @@ class Near {
           "update_redemption_btc_txn_hash",
           "increment_deposit_verified_count",
           "increment_deposit_minted_txn_hash_verified_count",
+          "increment_redemption_btc_txn_hash_verified_count",
           "increment_redemption_verified_count",
           "increment_bridging_verified_count",
           "create_mint_abtc_signed_tx",
@@ -100,7 +101,7 @@ class Near {
           "update_bridging_remarks",
           "create_bridging_abtc_signed_tx",
           "update_bridging_minted",
-          "update_redemption_custody_txn_id",
+          "update_redemption_custody_txn_id"
         ],
       });
 
@@ -582,13 +583,12 @@ class Near {
 
           for (const tx of transactions) {
             // console.log(`Processing transaction ${tx.hash} in block ${blockHeight}`);
-            // console.log(tx.receiver_id);
+            //console.log(tx);
             // Skip transactions that are not from the target contract address
             if (tx.receiver_id !== targetContractId) {
-              console.log(`${tx.receiver_id} != ${targetContractId}`);
               continue;
             }
-
+            console.log(`${tx.receiver_id} == ${targetContractId}`);
             const txResult = await this.provider.txStatus(
               tx.hash,
               tx.signer_id

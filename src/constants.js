@@ -12,6 +12,7 @@ let constants = {
   BITHIVE_STATUS: {
     DEPOSIT_CONFIRMED: "DepositConfirmed",
     DEPOSIT_CONFIRMED_INVALID: "DepositConfirmedInvalid",
+    WITHDRAW_CONFIRMED: "WithdrawConfirmed",
   },
   ERR_MSG: { TIMEOUT: "TIMEOUT", TIMED_OUT: "TIMED OUT" },
 };
@@ -29,13 +30,16 @@ async function fetchAndSetConstants(near) {
         BTC_DEPOSITED_INTO_ATLAS:
           fetchedConstants.deposit_status.DEP_BTC_DEPOSITED_INTO_ATLAS,
         BTC_PENDING_YIELD_PROVIDER_DEPOSIT:
-          fetchedConstants.deposit_status.DEP_BTC_PENDING_YIELD_PROVIDER_DEPOSIT,
+          fetchedConstants.deposit_status
+            .DEP_BTC_PENDING_YIELD_PROVIDER_DEPOSIT,
         BTC_YIELD_PROVIDER_DEPOSITED:
           fetchedConstants.deposit_status.DEP_BTC_YIELD_PROVIDER_DEPOSITED,
         BTC_PENDING_MINTED_INTO_ABTC:
           fetchedConstants.deposit_status.DEP_BTC_PENDING_MINTED_INTO_ABTC,
         BTC_MINTED_INTO_ABTC:
           fetchedConstants.deposit_status.DEP_BTC_MINTED_INTO_ABTC,
+        DEP_BTC_REFUNDING: fetchedConstants.deposit_status.DEP_BTC_REFUNDING,
+        DEP_BTC_REFUNDED: fetchedConstants.deposit_status.DEP_BTC_REFUNDED,
       },
       REDEMPTION_STATUS: {
         ABTC_BURNT: fetchedConstants.redemption_status.RED_ABTC_BURNT,
@@ -52,14 +56,14 @@ async function fetchAndSetConstants(near) {
           fetchedConstants.redemption_status
             .RED_BTC_YIELD_PROVIDER_UNSTAKE_PROCESSING,
         BTC_YIELD_PROVIDER_UNSTAKED:
-          fetchedConstants.redemption_status
-            .RED_BTC_YIELD_PROVIDER_UNSTAKED,
+          fetchedConstants.redemption_status.RED_BTC_YIELD_PROVIDER_UNSTAKED,
         BTC_PENDING_YIELD_PROVIDER_WITHDRAW:
           fetchedConstants.redemption_status
             .RED_BTC_PENDING_YIELD_PROVIDER_WITHDRAW,
         BTC_YIELD_PROVIDER_WITHDRAWING:
-          fetchedConstants.redemption_status
-            .RED_BTC_YIELD_PROVIDER_WITHDRAWING,
+          fetchedConstants.redemption_status.RED_BTC_YIELD_PROVIDER_WITHDRAWING,
+        BTC_YIELD_PROVIDER_WITHDRAWN:
+          fetchedConstants.redemption_status.RED_BTC_YIELD_PROVIDER_WITHDRAWN,
         BTC_REDEEMED_BACK_TO_USER:
           fetchedConstants.redemption_status.RED_BTC_REDEEMED_BACK_TO_USER,
       },
@@ -82,6 +86,11 @@ async function fetchAndSetConstants(near) {
       },
       DELIMITER: {
         COMMA: fetchedConstants.delimiter.COMMA,
+      },
+      NEAR_GAS: {
+        GAS_FOR_STORAGE_DEPOSIT:
+          fetchedConstants.near_gas.GAS_FOR_STORAGE_DEPOSIT,
+        MIN_STORAGE_DEPOSIT: fetchedConstants.near_gas.MIN_STORAGE_DEPOSIT,
       },
     };
 

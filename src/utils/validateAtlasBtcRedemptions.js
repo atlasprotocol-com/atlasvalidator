@@ -103,14 +103,15 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
               abtc_redemption_chain_id: chainConfig.chainID,
               btc_receiving_address: btcAddress,
               abtc_amount: Number(amount),
+              protocol_fee: 0,
               btc_txn_hash: "", // this field not used in validation
+              btc_redemption_fee: 0,
               timestamp: timestamp,
               status: evmStatus,
               remarks: "",
               date_created: timestamp, // this field not used in validation
               verified_count: 0,
               btc_txn_hash_verified_count: 0,
-              custody_txn_id: "",
               yield_provider_gas_fee: 0,
               yield_provider_txn_hash: "",
             };
@@ -163,7 +164,9 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
               abtc_redemption_chain_id: chainConfig.chainID,
               btc_receiving_address: btcAddress,
               abtc_amount: Number(amount),
+              protocol_fee: 0,
               btc_txn_hash: "", // this field not used in validation
+              btc_redemption_fee: 0,
               timestamp: timestamp,
               status: evmStatus,
               remarks: "",
@@ -219,13 +222,13 @@ async function ValidateAtlasBtcRedemptionsBtcTxnHash(
         (redemption) =>
           redemption.status ===
             REDEMPTION_STATUS.BTC_PENDING_MEMPOOL_CONFIRMATION &&
-          redemption.btc_txn_hash &&
+          redemption.btc_txn_hash !== "" &&
           redemption.remarks === "" &&
           redemption.btc_txn_hash_verified_count < validatorThreshold
       );
 
       for (const redemption of allRedemptionsToValidate) {
-        const btcMempoolRecord = btcMempool.find(
+        const btcMempoolRecord = btcMempool?.data?.find?.(
           (record) => record.txid === redemption.btc_txn_hash
         );
 

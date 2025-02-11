@@ -179,6 +179,7 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
               dest_chain_address: destChainAddress,
               dest_txn_hash: "", // this field not used in validation
               abtc_amount: Number(amount),
+              protocol_fee: Number(protocolFee || 0),
               timestamp: timestamp,
               status: evmStatus,
               remarks: "",
