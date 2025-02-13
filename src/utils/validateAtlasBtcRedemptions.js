@@ -114,6 +114,7 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
               btc_txn_hash_verified_count: 0,
               yield_provider_gas_fee: 0,
               yield_provider_txn_hash: "",
+              btc_txn_hash_verified_count: 0,
             };
 
             let blnValidated = await near.incrementRedemptionVerifiedCount(
@@ -174,6 +175,7 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
               verified_count: 0,
               yield_provider_gas_fee: 0,
               yield_provider_txn_hash: "",
+              btc_txn_hash_verified_count: 0,
             };
 
             let blnValidated = await near.incrementRedemptionVerifiedCount(
