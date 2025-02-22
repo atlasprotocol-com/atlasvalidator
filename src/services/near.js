@@ -808,6 +808,8 @@ class Near {
                 const destChainId = memo.destChainId;
                 const destChainAddress = memo.destChainAddress;
                 const transactionHash = txResult.transaction.hash;
+                const mintingFeeSat = memo.mintingFeeSat;
+                const bridgingFeeSat = memo.bridgingFeeSat;
 
                 events.push({
                   returnValues: {
@@ -815,6 +817,8 @@ class Near {
                     wallet,
                     destChainId,
                     destChainAddress,
+                    mintingFeeSat,
+                    bridgingFeeSat,
                   },
                   transactionHash,
                   blockNumber: blockHeight,

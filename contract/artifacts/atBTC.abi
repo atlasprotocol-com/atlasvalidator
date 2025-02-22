@@ -123,6 +123,11 @@
 		"type": "error"
 	},
 	{
+		"inputs": [],
+		"name": "RenounceOwnershipBlocked",
+		"type": "error"
+	},
+	{
 		"anonymous": false,
 		"inputs": [
 			{
@@ -172,6 +177,18 @@
 				"indexed": false,
 				"internalType": "uint256",
 				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "mintingFeeSat",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "bridgingFeeSat",
 				"type": "uint256"
 			}
 		],
@@ -229,6 +246,12 @@
 				"internalType": "uint256",
 				"name": "amount",
 				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "originTxnHash",
+				"type": "string"
 			}
 		],
 		"name": "MintBridge",
@@ -257,6 +280,25 @@
 			}
 		],
 		"name": "MintDeposit",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "previousOwner",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "OwnershipTransferStarted",
 		"type": "event"
 	},
 	{
@@ -328,6 +370,13 @@
 		],
 		"name": "Unpaused",
 		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "acceptOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
 	},
 	{
 		"inputs": [
@@ -425,6 +474,16 @@
 				"internalType": "string",
 				"name": "destChainAddress",
 				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "mintingFeeSat",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "bridgingFeeSat",
+				"type": "uint256"
 			}
 		],
 		"name": "burnBridge",
@@ -502,6 +561,11 @@
 				"internalType": "string",
 				"name": "originChainAddress",
 				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "originTxnHash",
+				"type": "string"
 			}
 		],
 		"name": "mintBridge",
@@ -573,6 +637,19 @@
 				"internalType": "bool",
 				"name": "",
 				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "pendingOwner",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
 			}
 		],
 		"stateMutability": "view",

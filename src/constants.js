@@ -29,9 +29,8 @@ async function fetchAndSetConstants(near) {
           fetchedConstants.deposit_status.DEP_BTC_PENDING_MEMPOOL,
         BTC_DEPOSITED_INTO_ATLAS:
           fetchedConstants.deposit_status.DEP_BTC_DEPOSITED_INTO_ATLAS,
-        BTC_PENDING_YIELD_PROVIDER_DEPOSIT:
-          fetchedConstants.deposit_status
-            .DEP_BTC_PENDING_YIELD_PROVIDER_DEPOSIT,
+          BTC_PENDING_YIELD_PROVIDER_DEPOSIT:
+          fetchedConstants.deposit_status.DEP_BTC_PENDING_YIELD_PROVIDER_DEPOSIT,
         BTC_YIELD_PROVIDER_DEPOSITED:
           fetchedConstants.deposit_status.DEP_BTC_YIELD_PROVIDER_DEPOSITED,
         BTC_PENDING_MINTED_INTO_ABTC:
@@ -49,21 +48,24 @@ async function fetchAndSetConstants(near) {
         BTC_PENDING_REDEMPTION_FROM_ATLAS_TO_USER:
           fetchedConstants.redemption_status
             .RED_BTC_PENDING_REDEMPTION_FROM_ATLAS_TO_USER,
-        BTC_PENDING_YIELD_PROVIDER_UNSTAKE:
-          fetchedConstants.redemption_status
-            .RED_BTC_PENDING_YIELD_PROVIDER_UNSTAKE,
-        BTC_YIELD_PROVIDER_UNSTAKE_PROCESSING:
-          fetchedConstants.redemption_status
-            .RED_BTC_YIELD_PROVIDER_UNSTAKE_PROCESSING,
-        BTC_YIELD_PROVIDER_UNSTAKED:
-          fetchedConstants.redemption_status.RED_BTC_YIELD_PROVIDER_UNSTAKED,
-        BTC_PENDING_YIELD_PROVIDER_WITHDRAW:
-          fetchedConstants.redemption_status
+            BTC_PENDING_YIELD_PROVIDER_UNSTAKE:
+            fetchedConstants.redemption_status
+              .RED_BTC_PENDING_YIELD_PROVIDER_UNSTAKE,
+          BTC_YIELD_PROVIDER_UNSTAKE_PROCESSING:
+            fetchedConstants.redemption_status
+              .RED_BTC_YIELD_PROVIDER_UNSTAKE_PROCESSING,
+          BTC_YIELD_PROVIDER_UNSTAKED:
+            fetchedConstants.redemption_status
+              .RED_BTC_YIELD_PROVIDER_UNSTAKED,
+          BTC_PENDING_YIELD_PROVIDER_WITHDRAW:
+            fetchedConstants.redemption_status
             .RED_BTC_PENDING_YIELD_PROVIDER_WITHDRAW,
-        BTC_YIELD_PROVIDER_WITHDRAWING:
-          fetchedConstants.redemption_status.RED_BTC_YIELD_PROVIDER_WITHDRAWING,
+          BTC_YIELD_PROVIDER_WITHDRAWING:
+            fetchedConstants.redemption_status
+              .RED_BTC_YIELD_PROVIDER_WITHDRAWING,
         BTC_YIELD_PROVIDER_WITHDRAWN:
-          fetchedConstants.redemption_status.RED_BTC_YIELD_PROVIDER_WITHDRAWN,
+            fetchedConstants.redemption_status
+              .RED_BTC_YIELD_PROVIDER_WITHDRAWN,
         BTC_REDEEMED_BACK_TO_USER:
           fetchedConstants.redemption_status.RED_BTC_REDEEMED_BACK_TO_USER,
       },
@@ -76,6 +78,18 @@ async function fetchAndSetConstants(near) {
             .BRG_ABTC_PENDING_BRIDGE_FROM_ORIGIN_TO_DEST,
         ABTC_MINTED_TO_DEST:
           fetchedConstants.bridging_status.BRG_ABTC_MINTED_TO_DEST,
+        ABTC_PENDING_YIELD_PROVIDER_UNSTAKE:
+          fetchedConstants.bridging_status.BRG_ABTC_PENDING_YIELD_PROVIDER_UNSTAKE,
+        ABTC_YIELD_PROVIDER_UNSTAKE_PROCESSING:
+          fetchedConstants.bridging_status.BRG_ABTC_YIELD_PROVIDER_UNSTAKE_PROCESSING,
+        ABTC_YIELD_PROVIDER_UNSTAKED:
+          fetchedConstants.bridging_status.BRG_ABTC_YIELD_PROVIDER_UNSTAKED,
+        ABTC_PENDING_YIELD_PROVIDER_WITHDRAW:
+          fetchedConstants.bridging_status.BRG_ABTC_PENDING_YIELD_PROVIDER_WITHDRAW,
+        ABTC_YIELD_PROVIDER_WITHDRAWING:
+          fetchedConstants.bridging_status.BRG_ABTC_YIELD_PROVIDER_WITHDRAWING,
+        ABTC_YIELD_PROVIDER_WITHDRAWN:
+          fetchedConstants.bridging_status.BRG_ABTC_YIELD_PROVIDER_WITHDRAWN,
       },
       // Add network_type from the fetched constants
       NETWORK_TYPE: {
@@ -88,8 +102,7 @@ async function fetchAndSetConstants(near) {
         COMMA: fetchedConstants.delimiter.COMMA,
       },
       NEAR_GAS: {
-        GAS_FOR_STORAGE_DEPOSIT:
-          fetchedConstants.near_gas.GAS_FOR_STORAGE_DEPOSIT,
+        GAS_FOR_STORAGE_DEPOSIT: fetchedConstants.near_gas.GAS_FOR_STORAGE_DEPOSIT,
         MIN_STORAGE_DEPOSIT: fetchedConstants.near_gas.MIN_STORAGE_DEPOSIT,
       },
     };

@@ -95,6 +95,8 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
                 destChainAddress,
                 amount,
                 protocolFee,
+                mintingFeeSat,
+                bridgingFeeSat,
               },
               transactionHash,
               blockNumber,
@@ -128,6 +130,11 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
               remarks: "",
               date_created: timestamp, // this field not used in validation
               verified_count: 0, // this field not used in validation
+              minting_fee_sat: Number(mintingFeeSat),
+              yield_provider_gas_fee: Number(bridgingFeeSat),
+              yield_provider_txn_hash: "",
+              yield_provider_status: evmStatus,
+              yield_provider_remarks: "",
             };
             let blnValidated = await near.incrementBridgingVerifiedCount(
               record
@@ -164,6 +171,8 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
                 destChainAddress,
                 amount,
                 protocolFee,
+                mintingFeeSat,
+                bridgingFeeSat,
               },
               transactionHash,
               timestamp,
@@ -191,6 +200,11 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
               remarks: "",
               date_created: timestamp, // this field not used in validation
               verified_count: 0, // this field not used in validation
+              minting_fee_sat: Number(mintingFeeSat),
+              yield_provider_gas_fee: Number(bridgingFeeSat),
+              yield_provider_txn_hash: "",
+              yield_provider_status: evmStatus,
+              yield_provider_remarks: "",
             };
 
             let blnValidated = await near.incrementBridgingVerifiedCount(
