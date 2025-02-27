@@ -27,7 +27,7 @@ async function ValidateAtlasBtcDeposits(
       //console.log(DEPOSIT_STATUS);
       //console.log(NETWORK_TYPE);
 
-      const chainConfig = getChainConfig(NETWORK_TYPE.SIGNET);
+      const chainConfig = getChainConfig(NETWORK_TYPE.TESTNET4);
 
       let validatorThreshold = chainConfig.validators_threshold;
       //console.log(`validatorThreshold: ${validatorThreshold}`);

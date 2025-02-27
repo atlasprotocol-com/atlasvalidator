@@ -138,11 +138,11 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
           );
 
           const events = await near.getPastBurnRedemptionEventsInBatches(
-            startBlock - 100,
+            startBlock - 10,
             endBlock,
             chainConfig.aBTCAddress
           );
-
+          
           for (const event of events) {
             const {
               returnValues: { amount, wallet, btcAddress },
@@ -215,7 +215,7 @@ async function ValidateAtlasBtcRedemptionsBtcTxnHash(
       const isProductionMode = await near.isProductionMode();
       const { REDEMPTION_STATUS, NETWORK_TYPE } = getConstants();
       const chainConfig = getChainConfig(
-        isProductionMode ? NETWORK_TYPE.BITCOIN : NETWORK_TYPE.SIGNET
+        isProductionMode ? NETWORK_TYPE.BITCOIN : NETWORK_TYPE.TESTNET4
       );
       let validatorThreshold = chainConfig.validators_threshold;
 

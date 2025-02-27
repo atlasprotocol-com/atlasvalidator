@@ -870,6 +870,7 @@ class Near {
           for (const tx of transactions) {
             // console.log(`Processing transaction ${tx.hash} in block ${blockHeight}`);
             // Skip transactions that are not from the target contract address
+            
             if (tx.receiver_id !== targetContractId) {
               continue;
             }

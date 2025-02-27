@@ -11,7 +11,7 @@ class Bitcoin {
     this.chain_rpc = chain_rpc;
 
     this.network =
-      network === "testnet" || network === "signet"
+      network === "testnet" || network === "signet" || network === "testnet4"
         ? bitcoin.networks.testnet // This will select either 'testnet' or 'signet'
         : bitcoin.networks.bitcoin; // Default to mainnet if neither testnet nor signet is specified
   }

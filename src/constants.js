@@ -93,6 +93,7 @@ async function fetchAndSetConstants(near) {
       },
       // Add network_type from the fetched constants
       NETWORK_TYPE: {
+        TESTNET4: fetchedConstants.network_type.TESTNET4,
         SIGNET: fetchedConstants.network_type.SIGNET,
         BITCOIN: fetchedConstants.network_type.BITCOIN,
         EVM: fetchedConstants.network_type.EVM,
