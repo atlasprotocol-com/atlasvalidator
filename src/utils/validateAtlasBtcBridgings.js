@@ -46,9 +46,11 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
       for (let chainID in groupedTxns) {
         const chainConfig = getChainConfig(chainID);
         let validatorThreshold = chainConfig.validators_threshold;
+       
         const bridgings = groupedTxns[chainID].filter(
           (bridging) => bridging.verified_count < validatorThreshold
         );
+        
         if (bridgings.length === 0) continue;
 
         // Find the earliest timestamp in the bridgings for this chain
@@ -71,7 +73,7 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
           );
           const endBlock = Math.min(
             Number(await ethereum.getCurrentBlockNumber()),
-            Number(startBlock + BigInt(500))
+            Number(startBlock + BigInt(100))
           );
           console.log(
             `${batchName}  chainID:${chainConfig.chainID} - startBlock: ${startBlock} endBlock:${endBlock}`
@@ -135,6 +137,9 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
               yield_provider_txn_hash: "",
               yield_provider_status: evmStatus,
               yield_provider_remarks: "",
+              treasury_btc_txn_hash: "",
+              treasury_verified_count: 0,
+              minted_txn_hash_verified_count: 0,
             };
             let blnValidated = await near.incrementBridgingVerifiedCount(
               record
@@ -145,6 +150,7 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
             );
           }
         } else if (chainConfig.networkType === NETWORK_TYPE.NEAR) {
+          
           const startBlock = await near.getBlockNumberByTimestamp(
             earliestTimestamp
           );
@@ -158,8 +164,8 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
           );
 
           const events = await near.getPastBurnBridgingEventsInBatches(
-            startBlock - 100,
-            endBlock,
+            startBlock - 10,
+            endBlock + 10,
             chainConfig.aBTCAddress
           );
 
@@ -205,6 +211,10 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
               yield_provider_txn_hash: "",
               yield_provider_status: evmStatus,
               yield_provider_remarks: "",
+              treasury_btc_txn_hash: "",
+              treasury_verified_count: 0,
+              minted_txn_hash_verified_count: 0,
+
             };
 
             let blnValidated = await near.incrementBridgingVerifiedCount(
