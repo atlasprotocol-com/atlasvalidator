@@ -81,17 +81,17 @@ async function ValidateAtlasBtcDeposits(
           receiving_address: receivingAddress,
           btc_amount: btcAmount,
           protocol_fee: protocolFee,
-          minting_fee: mintingFee,
           minted_txn_hash: mintedTxnHash,
+          minting_fee: mintingFee,
           timestamp: btcMempoolTxn.status.block_time,
           status: btcStatus,
           remarks: remarks,
           date_created: btcMempoolTxn.status.block_time, // this field not used in validation
           verified_count: 0, // this field not used in validation
-          retry_count: 0, // this field not used in validation
-          minted_txn_hash_verified_count: 0, // this field not used in validation
           yield_provider_gas_fee: yieldProviderGasFee,
           yield_provider_txn_hash: "",
+          retry_count: 0, // this field not used in validation
+          minted_txn_hash_verified_count: 0, // this field not used in validation
         };
         console.log(btcMempoolDepositRecord);
 
