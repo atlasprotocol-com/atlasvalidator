@@ -133,7 +133,9 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
               date_created: timestamp, // this field not used in validation
               verified_count: 0, // this field not used in validation
               minting_fee_sat: Number(mintingFeeSat),
-              yield_provider_gas_fee: Number(bridgingFeeSat),
+              bridging_gas_fee_sat: Number(bridgingFeeSat),
+              actual_gas_fee_sat: 0,
+              yield_provider_gas_fee: 0,
               yield_provider_txn_hash: "",
               yield_provider_status: evmStatus,
               yield_provider_remarks: "",
@@ -207,7 +209,9 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
               date_created: timestamp, // this field not used in validation
               verified_count: 0, // this field not used in validation
               minting_fee_sat: Number(mintingFeeSat),
-              yield_provider_gas_fee: Number(bridgingFeeSat),
+              bridging_gas_fee_sat: Number(bridgingFeeSat),
+              actual_gas_fee_sat: 0,
+              yield_provider_gas_fee: 0,
               yield_provider_txn_hash: "",
               yield_provider_status: evmStatus,
               yield_provider_remarks: "",
