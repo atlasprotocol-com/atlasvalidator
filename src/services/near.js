@@ -101,7 +101,7 @@ class Near {
           "update_bridging_remarks",
           "create_bridging_abtc_signed_tx",
           "update_bridging_minted",
-          "update_redemption_custody_txn_id"
+          "update_redemption_custody_txn_id",
         ],
       });
 
@@ -627,7 +627,11 @@ class Near {
                 const btcTxnHash = memo.btc_txn_hash; // Extract btc_txn_hash
                 const transactionHash = txResult.transaction.hash;
 
-                events.push({ btcTxnHash, transactionHash });
+                events.push({
+                  btcTxnHash,
+                  transactionHash,
+                  receiptId: receipt.id,
+                });
 
                 return events;
               }
@@ -718,6 +722,7 @@ class Near {
                   originChainAddress,
                   originTxnHash,
                   transactionHash,
+                  receiptId: receipt.id,
                   timestamp: block.header.timestamp,
                 });
 
@@ -821,6 +826,7 @@ class Near {
                     bridgingFeeSat,
                   },
                   transactionHash,
+                  receiptId: receipt.id,
                   blockNumber: blockHeight,
                   timestamp: Math.floor(block.header.timestamp / 1000000000),
                   status: true,
@@ -870,7 +876,7 @@ class Near {
           for (const tx of transactions) {
             // console.log(`Processing transaction ${tx.hash} in block ${blockHeight}`);
             // Skip transactions that are not from the target contract address
-            
+
             if (tx.receiver_id !== targetContractId) {
               continue;
             }
@@ -922,6 +928,7 @@ class Near {
                     btcAddress,
                   },
                   transactionHash,
+                  receiptId: receipt.id,
                   blockNumber: blockHeight,
                   timestamp: Math.floor(block.header.timestamp / 1000000000),
                   status: true,
