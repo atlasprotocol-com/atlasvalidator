@@ -79,7 +79,7 @@ async function ValidateAtlasBtcDeposits(
           btc_sender_address: btcSenderAddress,
           receiving_chain_id: receivingChainID,
           receiving_address: receivingAddress,
-          btc_amount: btcAmount,
+          btc_amount: btcAmount + protocolFee + mintingFee,
           protocol_fee: protocolFee,
           minted_txn_hash: mintedTxnHash,
           minting_fee: mintingFee,
