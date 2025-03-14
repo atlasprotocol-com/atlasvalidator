@@ -190,12 +190,12 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
           }
         } else if (chainConfig.networkType === NETWORK_TYPE.NEAR) {
           const startBlock = await near.getBlockNumberByTimestamp(
-            earliestTimestamp
+            deposit.timestamp
           );
 
           const endBlock = Math.min(
             Number(await near.getCurrentBlockNumber()),
-            Number(startBlock + 10)
+            Number(startBlock + 5)
           );
 
           console.log("NEAR chainID: ", chainConfig.chainID);
@@ -203,7 +203,7 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
           console.log("endBlock: ", endBlock);
 
           const events = await near.getPastMintEventsInBatches(
-            startBlock - 10,
+            startBlock - 5,
             endBlock
           );
 
@@ -211,6 +211,8 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
           const matchingEvent = events.find(
             (event) => event.btcTxnHash === deposit.btc_txn_hash
           );
+
+          console.log("matchingEvent:", matchingEvent);
 
           if (matchingEvent) {
             const { btcTxnHash, receiptId, transactionHash } = matchingEvent;
@@ -226,15 +228,9 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
                 `${batchName}: transaction:${transactionHash} validated`
               );
             } else {
-              const receiptIdValidated =
-                await near.incrementDepositMintedTxnHashVerifiedCount(
-                  btcTxnHash,
-                  receiptId
-                );
-
-              if (receiptIdValidated) {
-                console.log(`${batchName}: transaction:${receiptId} validated`);
-              }
+              console.log(
+                `${batchName}: transaction:${transactionHash} validation failed`
+              );
             }
           }
         }
