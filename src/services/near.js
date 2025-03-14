@@ -165,8 +165,11 @@ class Near {
   }
 
   // Function to get all deposits from NEAR contract
-  async getAllDeposits() {
-    return this.makeNearRpcViewCall("get_all_deposits", {});
+  async getAllDeposits(fromIndex, limit) {
+    return this.makeNearRpcViewCall("get_all_deposits", {
+      from_index: fromIndex,
+      limit: limit,
+    });
   }
 
   // Function to get all deposits from NEAR contract

@@ -48,10 +48,22 @@ let bridgings = [];
 // Function to poll Near Atlas deposit records
 const getAllDepositHistory = async () => {
   try {
-    deposits = await near.getAllDeposits();
-    console.log(`Fetching deposits history: ${deposits.length}`);
+    //console.log("Fetching deposits history");
+    let allDeposits = [];
+    let fromIndex = 0;
+    const limit = 1000; // Fetch 50 records at a time
+    
+    while (true) {
+      const pageDeposits = await near.getAllDeposits(fromIndex, limit);
+      if (pageDeposits.length === 0) break; // No more records
+      
+      allDeposits = allDeposits.concat(pageDeposits);
+      fromIndex += limit;
+    }
+    
+    deposits = allDeposits;
   } catch (error) {
-    console.error(`Failed to fetch deposit history: ${error.message}`);
+    console.error(`Failed to fetch staking history: ${error.message}`);
   }
 };
 
