@@ -141,11 +141,6 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
         return;
       }
 
-      // Find the earliest timestamp in the deposits
-      const earliestTimestamp = Math.min(
-        ...allDepositsToValidate.map((deposit) => deposit.timestamp)
-      );
-
       for (const deposit of allDepositsToValidate) {
         const chainConfig = getChainConfig(deposit.receiving_chain_id);
         if (chainConfig.networkType === NETWORK_TYPE.EVM) {
@@ -156,12 +151,6 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
             chainConfig.aBTCAddress,
             chainConfig.abiPath
           );
-
-          const startBlock = await ethereum.getBlockNumberByTimestamp(
-            earliestTimestamp
-          );
-          const endBlock = await ethereum.getCurrentBlockNumber();
-          const batchSize = chainConfig.batchSize;
 
           const events = await ethereum.getPastMintEventsInBatches(
             startBlock,
@@ -189,49 +178,60 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
             }
           }
         } else if (chainConfig.networkType === NETWORK_TYPE.NEAR) {
-          const startBlock = await near.getBlockNumberByTimestamp(
-            deposit.timestamp
-          );
+          try {
+            const txResult = await near.provider.txStatus(
+              deposit.minted_txn_hash,
+              near.contract_id
+            );
 
-          const endBlock = Math.min(
-            Number(await near.getCurrentBlockNumber()),
-            Number(startBlock + 5)
-          );
+            // Find receipt with ft_mint event
+            const receipt = txResult.receipts_outcome.find((outcome) =>
+              outcome.outcome.logs.some((log) => {
+                try {
+                  const event = JSON.parse(log.replace("EVENT_JSON:", ""));
+                  return event.event === "ft_mint";
+                } catch (e) {
+                  return false;
+                }
+              })
+            );
 
-          console.log("NEAR chainID: ", chainConfig.chainID);
-          console.log("startBlock: ", startBlock);
-          console.log("endBlock: ", endBlock);
+            if (receipt) {
+              const logEntry = receipt.outcome.logs.find((log) => {
+                try {
+                  const event = JSON.parse(log.replace("EVENT_JSON:", ""));
+                  return event.event === "ft_mint";
+                } catch (e) {
+                  return false;
+                }
+              });
 
-          const events = await near.getPastMintEventsInBatches(
-            startBlock - 5,
-            endBlock
-          );
+              if (logEntry) {
+                const event = JSON.parse(logEntry.replace("EVENT_JSON:", ""));
+                const memo = JSON.parse(event.data[0].memo);
+                const btcTxnHash = memo.btc_txn_hash;
 
-          console.log(events);
-          const matchingEvent = events.find(
-            (event) => event.btcTxnHash === deposit.btc_txn_hash
-          );
+                if (btcTxnHash === deposit.btc_txn_hash) {
+                  const transactionHashValidated = 
+                    await near.incrementDepositMintedTxnHashVerifiedCount(
+                      deposit.btc_txn_hash,
+                      deposit.minted_txn_hash
+                    );
 
-          console.log("matchingEvent:", matchingEvent);
-
-          if (matchingEvent) {
-            const { btcTxnHash, receiptId, transactionHash } = matchingEvent;
-
-            const transactionHashValidated =
-              await near.incrementDepositMintedTxnHashVerifiedCount(
-                btcTxnHash,
-                transactionHash
-              );
-
-            if (transactionHashValidated) {
-              console.log(
-                `${batchName}: transaction:${transactionHash} validated`
-              );
-            } else {
-              console.log(
-                `${batchName}: transaction:${transactionHash} validation failed`
-              );
+                  if (transactionHashValidated) {
+                    console.log(
+                      `${batchName}: transaction:${deposit.minted_txn_hash} validated`
+                    );
+                  } else {
+                    console.log(
+                      `${batchName}: transaction:${deposit.minted_txn_hash} validation failed`
+                    );
+                  }
+                }
+              }
             }
+          } catch (error) {
+            console.error(`Error validating NEAR transaction: ${error}`);
           }
         }
       }
