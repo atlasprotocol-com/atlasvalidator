@@ -66,41 +66,42 @@ async function ValidateAtlasBtcDeposits(
             btcMempoolTxn,
             btcAtlasDepositAddress
           );
-        }
+       
 
-        let btcStatus = 0;
-        if (btcMempoolTxn.status.confirmed) {
-          btcStatus = DEPOSIT_STATUS.BTC_DEPOSITED_INTO_ATLAS;
-        }
+          let btcStatus = 0;
+          if (btcMempoolTxn.status.confirmed) {
+            btcStatus = DEPOSIT_STATUS.BTC_DEPOSITED_INTO_ATLAS;
+          }
 
-        // Create the DepositRecord object
-        const btcMempoolDepositRecord = {
-          btc_txn_hash: btcMempoolTxn.txid,
-          btc_sender_address: btcSenderAddress,
-          receiving_chain_id: receivingChainID,
-          receiving_address: receivingAddress,
-          btc_amount: btcAmount + protocolFee + mintingFee,
-          protocol_fee: protocolFee,
-          minted_txn_hash: mintedTxnHash,
-          minting_fee: mintingFee,
-          timestamp: btcMempoolTxn.status.block_time,
-          status: btcStatus,
-          remarks: remarks,
-          date_created: btcMempoolTxn.status.block_time, // this field not used in validation
-          verified_count: 0, // this field not used in validation
-          yield_provider_gas_fee: yieldProviderGasFee,
-          yield_provider_txn_hash: "",
-          retry_count: 0, // this field not used in validation
-          minted_txn_hash_verified_count: 0, // this field not used in validation
-        };
-        console.log(btcMempoolDepositRecord);
+          // Create the DepositRecord object
+          const btcMempoolDepositRecord = {
+            btc_txn_hash: btcMempoolTxn.txid,
+            btc_sender_address: btcSenderAddress,
+            receiving_chain_id: receivingChainID,
+            receiving_address: receivingAddress,
+            btc_amount: btcAmount + protocolFee + mintingFee,
+            protocol_fee: protocolFee,
+            minted_txn_hash: mintedTxnHash,
+            minting_fee: mintingFee,
+            timestamp: btcMempoolTxn.status.block_time,
+            status: btcStatus,
+            remarks: remarks,
+            date_created: btcMempoolTxn.status.block_time, // this field not used in validation
+            verified_count: 0, // this field not used in validation
+            yield_provider_gas_fee: yieldProviderGasFee,
+            yield_provider_txn_hash: "",
+            retry_count: 0, // this field not used in validation
+            minted_txn_hash_verified_count: 0, // this field not used in validation
+          };
+          console.log(btcMempoolDepositRecord);
 
-        let blnValidated = await near.incrementDepositVerifiedCount(
-          btcMempoolDepositRecord
-        );
+          let blnValidated = await near.incrementDepositVerifiedCount(
+            btcMempoolDepositRecord
+          );
 
-        if (blnValidated) {
-          console.log(`BTC Txn Hash ${btcMempoolTxn.txid} Validated.`);
+          if (blnValidated) {
+            console.log(`BTC Txn Hash ${btcMempoolTxn.txid} Validated.`);
+          }
         }
       }
 
@@ -123,14 +124,15 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
     try {
       console.log(`${batchName}. Start run ...`);
       flagsBatch.ValidateAtlasBtcDepositsMintedTxnHashRunning = true;
-
       const { DEPOSIT_STATUS, NETWORK_TYPE } = getConstants();
       const allDepositsToValidate = deposits.filter((deposit) => {
+        if (deposit.remarks !== "") {
+          return false;
+        }
         const chainConfig = getChainConfig(deposit.receiving_chain_id);
         const validatorThreshold = chainConfig.validators_threshold;
         return (
           deposit.status === DEPOSIT_STATUS.BTC_PENDING_MINTED_INTO_ABTC &&
-          deposit.remarks === "" &&
           deposit.minted_txn_hash_verified_count < validatorThreshold &&
           deposit.minted_txn_hash
         );
@@ -152,10 +154,14 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
             chainConfig.abiPath
           );
 
+          const startBlock = await ethereum.getBlockNumberByTimestamp(
+            deposit.timestamp
+          );
+
           const events = await ethereum.getPastMintEventsInBatches(
-            startBlock,
-            endBlock,
-            batchSize
+            startBlock - 50n,
+            startBlock + 50n,
+            1000
           );
 
           const matchingEvent = events.find(
@@ -179,6 +185,7 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
           }
         } else if (chainConfig.networkType === NETWORK_TYPE.NEAR) {
           try {
+            console.log(`Validating NEAR transaction: ${deposit.minted_txn_hash}`);
             const txResult = await near.provider.txStatus(
               deposit.minted_txn_hash,
               near.contract_id
