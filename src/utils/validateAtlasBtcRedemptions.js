@@ -2,6 +2,7 @@ const { Web3 } = require("web3");
 
 const { getConstants } = require("../constants");
 const { Ethereum } = require("../services/ethereum");
+const { sendErrorEmail } = require("./emailService");
 
 const { getChainConfig } = require("./network.chain.config");
 const { flagsBatch, blockRange } = require("./batchFlags");
@@ -125,72 +126,68 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
             );
           }
         } else if (chainConfig.networkType === NETWORK_TYPE.NEAR) {
-          const startBlock = await near.getBlockNumberByTimestamp(
-            earliestTimestamp
+          const redemptionTxnHash = redemptions[0].txn_hash;
+          const onChainHash = redemptionTxnHash.split(DELIMITER.COMMA)[1];
+          const timestamp = Math.floor(Date.now() / 1000);
+          const evmStatus = REDEMPTION_STATUS.ABTC_BURNT;
+          throw new Error("Test error email");
+
+          console.log(`Validating NEAR transaction: ${onChainHash}`);
+          const txResult = await near.provider.txStatus(
+            onChainHash,
+            near.contract_id
           );
 
-          const endBlock = Math.min(
-            Number(await near.getCurrentBlockNumber()),
-            Number(startBlock + 10)
-          );
-          console.log(
-            `${batchName}  chainID:${chainConfig.chainID} - startBlock: ${startBlock} endBlock:${endBlock}`
-          );
+          // Get first receipt from transaction result
+          const receipt = txResult.receipts_outcome[0];
 
-          const events = await near.getPastBurnRedemptionEventsInBatches(
-            startBlock - 10,
-            endBlock,
-            chainConfig.aBTCAddress
-          );
-          
-          for (const event of events) {
-            const {
-              returnValues: { amount, wallet, btcAddress },
-              transactionHash,
-              timestamp,
-              status,
-            } = event; // Make sure blockNumber is part of the event object
-
-            let redemptionTxnHash = `${chainConfig.chainID}${DELIMITER.COMMA}${transactionHash}`;
-            let evmStatus = 0;
-            if (status) {
-              evmStatus = REDEMPTION_STATUS.ABTC_BURNT;
-            }
-
-            // Create the redemptionRecord object
-            const record = {
-              txn_hash: redemptionTxnHash,
-              abtc_redemption_address: wallet,
-              abtc_redemption_chain_id: chainConfig.chainID,
-              btc_receiving_address: btcAddress,
-              abtc_amount: Number(amount),
-              protocol_fee: 0,
-              btc_txn_hash: "", // this field not used in validation
-              btc_redemption_fee: 0,
-              timestamp: timestamp,
-              status: evmStatus,
-              remarks: "",
-              date_created: timestamp, // this field not used in validation
-              verified_count: 0,
-              yield_provider_gas_fee: 0,
-              yield_provider_txn_hash: "",
-              btc_txn_hash_verified_count: 0,
-            };
-
-            let blnValidated = await near.incrementRedemptionVerifiedCount(
-              record
-            );
-
-            console.log(
-              `${batchName}: Validating ${redemptionTxnHash} -> ${blnValidated}`
-            );
+          // Find first event log
+          const eventLog = receipt.outcome.logs[0];
+          if (!eventLog) {
+            console.log("No event logs found");
+            continue;
           }
+
+          // Parse event JSON
+          const eventJson = JSON.parse(eventLog.replace("EVENT_JSON:", ""));
+
+          // Process event based on type
+          const redeemMemo = JSON.parse(eventJson.data[0].memo);
+
+          // Create the redemptionRecord object
+          const record = {
+            txn_hash: redemptionTxnHash,
+            abtc_redemption_address: redeemMemo.address,
+            abtc_redemption_chain_id: chainConfig.chainID,
+            btc_receiving_address: redeemMemo.btcAddress,
+            abtc_amount: Number(eventJson.data[0].amount),
+            protocol_fee: 0,
+            btc_txn_hash: "", // this field not used in validation
+            btc_redemption_fee: 0,
+            timestamp: timestamp,
+            status: evmStatus,
+            remarks: "",
+            date_created: timestamp, // this field not used in validation
+            verified_count: 0,
+            yield_provider_gas_fee: 0,
+            yield_provider_txn_hash: "",
+            btc_txn_hash_verified_count: 0,
+          };
+
+          let blnValidated = await near.incrementRedemptionVerifiedCount(
+            record
+          );
+
+          console.log(
+            `${batchName}: Validating ${redemptionTxnHash} -> ${blnValidated}`
+          );
         }
       }
 
       console.log(`${batchName} completed successfully.`);
     } catch (error) {
       console.error(`Error ${batchName}:`, error);
+      await sendErrorEmail(error, batchName);
     } finally {
       flagsBatch.ValidateAtlasBtcRedemptionsRunning = false;
     }
@@ -250,6 +247,7 @@ async function ValidateAtlasBtcRedemptionsBtcTxnHash(
       console.log(`${batchName} completed successfully.`);
     } catch (error) {
       console.error(`Error ${batchName}:`, error);
+      await sendErrorEmail(error, batchName);
     } finally {
       flagsBatch.ValidateAtlasBtcRedemptionsBtcTxnHashRunning = false;
     }

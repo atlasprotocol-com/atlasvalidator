@@ -110,30 +110,30 @@ async function continuousValidation() {
     try {
       // Fetch data
       console.log("Starting a new validation cycle...");
-      await getAllDepositHistory();
-      await getAllRedemptionHistory();
-      await getBtcMempoolRecords();
-      await getAllBridgingHistory();
+      getAllDepositHistory();
+      getAllRedemptionHistory();
+      getBtcMempoolRecords();
+      getAllBridgingHistory();
 
       // Validate deposits
-      await ValidateAtlasBtcDeposits(
+      ValidateAtlasBtcDeposits(
         deposits,
         bttcDepositAddress,
         near,
         bitcoin
       );
-      await ValidateAtlasBtcDepositsMintedTxnHash(deposits, near);
+      ValidateAtlasBtcDepositsMintedTxnHash(deposits, near);
 
       // Validate redemptions
-      await ValidateAtlasBtcRedemptions(redemptions, near);
-      await ValidateAtlasBtcRedemptionsBtcTxnHash(
+      ValidateAtlasBtcRedemptions(redemptions, near);
+      ValidateAtlasBtcRedemptionsBtcTxnHash(
         redemptions,
         btcMempool,
         near
       );
 
       // // Validate bridgings
-      await ValidateAtlasBtcBridgings(bridgings, near);
+      ValidateAtlasBtcBridgings(bridgings, near);
 
       // Sleep for a while before the next iteration
     } catch (error) {

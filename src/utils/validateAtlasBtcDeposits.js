@@ -1,5 +1,6 @@
 const { getConstants } = require("../constants");
 const { Ethereum } = require("../services/ethereum");
+const { sendErrorEmail } = require("./emailService");
 
 const { getChainConfig } = require("./network.chain.config");
 const { flagsBatch } = require("./batchFlags");
@@ -12,7 +13,7 @@ async function ValidateAtlasBtcDeposits(
   bitcoin
 ) {
   const batchName = `Validator Batch ValidateAtlasBtcDeposits`;
-
+ 
   //console.log(`Checking for incomplete ${batchName} run...`);
   if (flagsBatch.ValidateAtlasBtcDepositsRunning) {
     //console.log(`Previous ${batchName} incomplete. Will skip this run.`);
@@ -79,7 +80,8 @@ async function ValidateAtlasBtcDeposits(
             btc_sender_address: btcSenderAddress,
             receiving_chain_id: receivingChainID,
             receiving_address: receivingAddress,
-            btc_amount: btcAmount + protocolFee + mintingFee,
+            //btc_amount: btcAmount, //old records
+            btc_amount: btcAmount + protocolFee + mintingFee, //new records
             protocol_fee: protocolFee,
             minted_txn_hash: mintedTxnHash,
             minting_fee: mintingFee,
@@ -108,6 +110,7 @@ async function ValidateAtlasBtcDeposits(
       console.log(`${batchName} completed successfully.`);
     } catch (error) {
       console.error(`Error ${batchName}:`, error);
+      await sendErrorEmail(error, batchName);
     } finally {
       flagsBatch.ValidateAtlasBtcDepositsRunning = false;
     }
@@ -185,6 +188,7 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
           }
         } else if (chainConfig.networkType === NETWORK_TYPE.NEAR) {
           try {
+            
             console.log(`Validating NEAR transaction: ${deposit.minted_txn_hash}`);
             const txResult = await near.provider.txStatus(
               deposit.minted_txn_hash,
@@ -239,6 +243,7 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
             }
           } catch (error) {
             console.error(`Error validating NEAR transaction: ${error}`);
+            await sendErrorEmail(error, batchName);
           }
         }
       }
@@ -246,6 +251,7 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
       console.log(`${batchName} completed successfully.`);
     } catch (error) {
       console.error(`Error ${batchName}:`, error);
+      await sendErrorEmail(error, batchName);
     } finally {
       flagsBatch.ValidateAtlasBtcDepositsMintedTxnHashRunning = false;
     }
