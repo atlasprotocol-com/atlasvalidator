@@ -130,7 +130,6 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
           const onChainHash = redemptionTxnHash.split(DELIMITER.COMMA)[1];
           const timestamp = Math.floor(Date.now() / 1000);
           const evmStatus = REDEMPTION_STATUS.ABTC_BURNT;
-          throw new Error("Test error email");
 
           console.log(`Validating NEAR transaction: ${onChainHash}`);
           const txResult = await near.provider.txStatus(
