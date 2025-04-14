@@ -67,7 +67,6 @@ async function ValidateAtlasBtcDeposits(
             btcMempoolTxn,
             btcAtlasDepositAddress
           );
-       
 
           let btcStatus = 0;
           if (btcMempoolTxn.status.confirmed) {
@@ -94,6 +93,7 @@ async function ValidateAtlasBtcDeposits(
             yield_provider_txn_hash: "",
             retry_count: 0, // this field not used in validation
             minted_txn_hash_verified_count: 0, // this field not used in validation
+            custody_txn_id: "",
           };
           console.log(btcMempoolDepositRecord);
 
@@ -188,8 +188,9 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
           }
         } else if (chainConfig.networkType === NETWORK_TYPE.NEAR) {
           try {
-            
-            console.log(`Validating NEAR transaction: ${deposit.minted_txn_hash}`);
+            console.log(
+              `Validating NEAR transaction: ${deposit.minted_txn_hash}`
+            );
             const txResult = await near.provider.txStatus(
               deposit.minted_txn_hash,
               near.contract_id
@@ -223,7 +224,7 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
                 const btcTxnHash = memo.btc_txn_hash;
 
                 if (btcTxnHash === deposit.btc_txn_hash) {
-                  const transactionHashValidated = 
+                  const transactionHashValidated =
                     await near.incrementDepositMintedTxnHashVerifiedCount(
                       deposit.btc_txn_hash,
                       deposit.minted_txn_hash
