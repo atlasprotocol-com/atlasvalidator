@@ -157,11 +157,11 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
 
       for (const deposit of allDepositsToValidate) {
 
-        const hasCallerVerifiedMintedTxnHash = await near.hasCallerVerifiedMintedTxnHash(deposit.btc_txn_hash, deposit.minted_txn_hash);
-        if (hasCallerVerifiedMintedTxnHash) {
-          console.log("[ValidateAtlasBtcDepositsMintedTxnHash] Caller has already verified this minted txn hash");
-          continue;
-        }
+        // const hasCallerVerifiedMintedTxnHash = await near.hasCallerVerifiedMintedTxnHash(deposit.btc_txn_hash, deposit.minted_txn_hash);
+        // if (hasCallerVerifiedMintedTxnHash) {
+        //   console.log("[ValidateAtlasBtcDepositsMintedTxnHash] Caller has already verified this minted txn hash");
+        //   continue;
+        // }
 
         const chainConfig = getChainConfig(deposit.receiving_chain_id);
         if (chainConfig.networkType === NETWORK_TYPE.EVM) {
