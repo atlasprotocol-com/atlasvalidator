@@ -34,11 +34,11 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
       
 
       for (const redemption of filteredTxns) {
-        const hasVerified = await near.hasCallerVerifiedRedemptionTxnHash(redemption.txn_hash);
-        if (hasVerified) {
-          console.log("[validateAtlasBtcRedemptions] Caller has already verified this redemption");
-          continue;
-        }
+        // const hasVerified = await near.hasCallerVerifiedRedemptionTxnHash(redemption.txn_hash);
+        // if (hasVerified) {
+        //   console.log("[validateAtlasBtcRedemptions] Caller has already verified this redemption");
+        //   continue;
+        // }
         const chainConfig = getChainConfig(redemption.abtc_redemption_chain_id);
         const redemptionTxnHash = redemption.txn_hash;
         console.log("redemptionTxnHash: ", redemptionTxnHash);
