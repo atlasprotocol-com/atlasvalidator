@@ -19,20 +19,18 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
       // Retrieve constants and validators_threshold
       const { REDEMPTION_STATUS, NETWORK_TYPE, DELIMITER, EVENT_NAME } = getConstants(); // Access constants dynamically
 
-      const filteredTxns = redemptions.filter(
-        (redemption) =>
-          redemption.status === REDEMPTION_STATUS.ABTC_BURNT &&
-          redemption.remarks === ""
-      );
+      const filteredTxns = redemptions.filter((redemption) => {
+        const chainConfig = getChainConfig(redemption.abtc_redemption_chain_id);
+        const validatorThreshold = chainConfig.validators_threshold;
+        return redemption.status === REDEMPTION_STATUS.ABTC_BURNT && 
+               redemption.remarks === "" &&
+               redemption.verified_count < validatorThreshold;
+      });
+
+      console.log("[validateAtlasBtcRedemptions] records to validate: ", filteredTxns.length);
 
       for (const redemption of filteredTxns) {
-        const chainID = redemption.abtc_redemption_chain_id;
-        const chainConfig = getChainConfig(chainID);
-        let validatorThreshold = chainConfig.validators_threshold;
-        console.log("validatorThreshold: ", validatorThreshold);
-        console.log("redemption.verified_count: ", redemption.verified_count);
-        if (redemption.verified_count >= validatorThreshold) continue;
-
+        const chainConfig = getChainConfig(redemption.abtc_redemption_chain_id);
         const redemptionTxnHash = redemption.txn_hash;
         console.log("redemptionTxnHash: ", redemptionTxnHash);
         const onChainHash = redemptionTxnHash.split(DELIMITER.COMMA)[1];
