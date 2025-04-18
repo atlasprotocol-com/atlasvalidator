@@ -177,9 +177,12 @@ class Near {
     return this.makeNearRpcViewCall("get_all_global_params", {});
   }
 
-  // Function to get all redemptions from NEAR contract
-  async getAllRedemptions() {
-    return this.makeNearRpcViewCall("get_all_redemptions", {});
+  // Function to get all redemptions from NEAR contract with pagination
+  async getAllRedemptions(fromIndex = 0, limit = 1000) {
+    return this.makeNearRpcViewCall("get_all_redemptions", {
+      from_index: fromIndex,
+      limit: limit
+    });
   }
 
   // Function to get all redemptions from NEAR contract

@@ -46,6 +46,7 @@ async function ValidateAtlasBtcDeposits(
 
       // For each NEAR deposit record, find respective bitcoin txn from bitcoin mempool with status = confirmed and prepare a mempool_deposit record to pass into NEAR function
       for (const nearTxn of allDepositsToValidate) {
+        
         let btcMempoolTxn = await bitcoin.fetchTxnByTxnID(nearTxn.btc_txn_hash);
         //console.log(btcMempoolTxn);
 
@@ -127,7 +128,7 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
     try {
       console.log(`${batchName}. Start run ...`);
       flagsBatch.ValidateAtlasBtcDepositsMintedTxnHashRunning = true;
-      const { DEPOSIT_STATUS, NETWORK_TYPE } = getConstants();
+      const { DEPOSIT_STATUS, NETWORK_TYPE, EVENT_NAME } = getConstants();
       const allDepositsToValidate = deposits.filter((deposit) => {
         if (deposit.remarks !== "") {
           return false;
@@ -157,19 +158,8 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
             chainConfig.abiPath
           );
 
-          const startBlock = await ethereum.getBlockNumberByTimestamp(
-            deposit.timestamp
-          );
-
-          const events = await ethereum.getPastMintEventsInBatches(
-            startBlock - 50n,
-            startBlock + 50n,
-            1000
-          );
-
-          const matchingEvent = events.find(
-            (event) => event.returnValues.btcTxnHash === deposit.btc_txn_hash
-          );
+          const matchingEvent = await ethereum.fetchEventByTxnHashAndEventName(deposit.minted_txn_hash, EVENT_NAME.MINT_DEPOSIT);
+          //console.log("matchingEvent: ", matchingEvent);
 
           if (matchingEvent) {
             const { transactionHash } = matchingEvent;
@@ -188,6 +178,16 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
           }
         } else if (chainConfig.networkType === NETWORK_TYPE.NEAR) {
           try {
+            // if (deposit.minted_txn_hash === "3ox3KPzrApfvRFCwbST9uxntbCBTxrTgZ8dNKLpmPhev" || 
+            //   deposit.minted_txn_hash === "4hnr5P7i5sUpQ2t3MyLCn7gYCJBbMZJsAM3Bh4i6X4cm" ||
+            //   deposit.minted_txn_hash === "LDELDaegUxv3k9odrN2kTZuXof3PWXjL6UB6hgx9eVV" || 
+            //   deposit.minted_txn_hash === "6qhsQrZD4AhkvHryktrXCNz2GAb9QyTXf5t4xb5s5hCp"
+            // ) {
+            //   console.log(
+            //     `Skipping NEAR transaction: ${deposit.minted_txn_hash}`
+            //   );
+            //   continue;
+            // }
             console.log(
               `Validating NEAR transaction: ${deposit.minted_txn_hash}`
             );

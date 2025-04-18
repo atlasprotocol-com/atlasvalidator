@@ -355,5 +355,14 @@ class Ethereum {
 
     return await uncompressedHexPointToEvmAddress(publicKey);
   }
+
+  async fetchEventByTxnHashAndEventName(txnHash, eventName) {
+    
+    const receipt = await this.web3.eth.getTransactionReceipt(txnHash);
+    if (!receipt) return null;
+
+    const events = await this.abtcContract.getPastEvents(eventName, { fromBlock: receipt.blockNumber, toBlock: receipt.blockNumber });
+    return events[0];
+  }
 }
 module.exports = { Ethereum };

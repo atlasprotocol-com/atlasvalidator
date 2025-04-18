@@ -70,7 +70,19 @@ const getAllDepositHistory = async () => {
 // Function to poll Near Atlas redemption records
 const getAllRedemptionHistory = async () => {
   try {
-    redemptions = await near.getAllRedemptions();
+    let allRedemptions = [];
+    let fromIndex = 0;
+    const limit = 1000; // Fetch 1000 records at a time
+    
+    while (true) {
+      const pageRedemptions = await near.getAllRedemptions(fromIndex, limit);
+      if (pageRedemptions.length === 0) break; // No more records
+      
+      allRedemptions = allRedemptions.concat(pageRedemptions);
+      fromIndex += limit;
+    }
+    
+    redemptions = allRedemptions;
     console.log(`Fetching redemptions history: ${redemptions.length}`);
   } catch (error) {
     console.error(`Failed to fetch redemption history: ${error.message}`);
