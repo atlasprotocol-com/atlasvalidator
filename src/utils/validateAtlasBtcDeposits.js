@@ -98,12 +98,18 @@ async function ValidateAtlasBtcDeposits(
           };
           console.log(btcMempoolDepositRecord);
 
-          let blnValidated = await near.incrementDepositVerifiedCount(
-            btcMempoolDepositRecord
-          );
+          try {
+            let blnValidated = await near.incrementDepositVerifiedCount(
+              btcMempoolDepositRecord
+            );
 
-          if (blnValidated) {
-            console.log(`BTC Txn Hash ${btcMempoolTxn.txid} Validated.`);
+            if (blnValidated) {
+              console.log(`BTC Txn Hash ${btcMempoolTxn.txid} Validated.`);
+            }
+          } catch (error) {
+            console.error(`Error validating NEAR transaction: ${error}`);
+            await sendErrorEmail(error, batchName);
+            continue;
           }
         }
       }
@@ -147,7 +153,16 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
         return;
       }
 
+      console.log("[ValidateAtlasBtcDepositsMintedTxnHash] records to validate: ", allDepositsToValidate.length);
+
       for (const deposit of allDepositsToValidate) {
+
+        const hasCallerVerifiedMintedTxnHash = await near.hasCallerVerifiedMintedTxnHash(deposit.btc_txn_hash, deposit.minted_txn_hash);
+        if (hasCallerVerifiedMintedTxnHash) {
+          console.log("[ValidateAtlasBtcDepositsMintedTxnHash] Caller has already verified this minted txn hash");
+          continue;
+        }
+
         const chainConfig = getChainConfig(deposit.receiving_chain_id);
         if (chainConfig.networkType === NETWORK_TYPE.EVM) {
           const ethereum = new Ethereum(
@@ -164,16 +179,22 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
           if (matchingEvent) {
             const { transactionHash } = matchingEvent;
             const { btcTxnHash } = matchingEvent.returnValues;
-            let blnValidated =
+            try {
+              let blnValidated =
               await near.incrementDepositMintedTxnHashVerifiedCount(
                 btcTxnHash,
                 transactionHash
               );
 
-            if (blnValidated) {
-              console.log(
-                `BTC Txn Hash ${btcTxnHash} with Minted Txn Hash ${transactionHash} on chain ID ${deposit.receiving_chain_id} Validated.`
-              );
+              if (blnValidated) {
+                console.log(
+                  `BTC Txn Hash ${btcTxnHash} with Minted Txn Hash ${transactionHash} on chain ID ${deposit.receiving_chain_id} Validated.`
+                );
+              }
+            } catch (error) {
+              console.error(`Error validating NEAR transaction: ${error}`);
+              await sendErrorEmail(error, batchName);
+              continue;
             }
           }
         } else if (chainConfig.networkType === NETWORK_TYPE.NEAR) {
@@ -224,9 +245,10 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
                 const btcTxnHash = memo.btc_txn_hash;
 
                 if (btcTxnHash === deposit.btc_txn_hash) {
-                  const transactionHashValidated =
-                    await near.incrementDepositMintedTxnHashVerifiedCount(
-                      deposit.btc_txn_hash,
+                  try {
+                    const transactionHashValidated =
+                      await near.incrementDepositMintedTxnHashVerifiedCount(
+                        deposit.btc_txn_hash,
                       deposit.minted_txn_hash
                     );
 
@@ -235,9 +257,14 @@ async function ValidateAtlasBtcDepositsMintedTxnHash(deposits, near) {
                       `${batchName}: transaction:${deposit.minted_txn_hash} validated`
                     );
                   } else {
-                    console.log(
-                      `${batchName}: transaction:${deposit.minted_txn_hash} validation failed`
-                    );
+                      console.log(
+                        `${batchName}: transaction:${deposit.minted_txn_hash} validation failed`
+                      );
+                    }
+                  } catch (error) {
+                    console.error(`Error validating NEAR transaction: ${error}`);
+                    await sendErrorEmail(error, batchName);
+                    continue;
                   }
                 }
               }

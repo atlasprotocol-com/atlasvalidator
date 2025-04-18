@@ -29,7 +29,16 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
 
       console.log("[validateAtlasBtcRedemptions] records to validate: ", filteredTxns.length);
 
+      
+
+      
+
       for (const redemption of filteredTxns) {
+        const hasVerified = await near.hasCallerVerifiedRedemptionTxnHash(redemption.txn_hash);
+        if (hasVerified) {
+          console.log("[validateAtlasBtcRedemptions] Caller has already verified this redemption");
+          continue;
+        }
         const chainConfig = getChainConfig(redemption.abtc_redemption_chain_id);
         const redemptionTxnHash = redemption.txn_hash;
         console.log("redemptionTxnHash: ", redemptionTxnHash);
@@ -75,13 +84,19 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
             btc_txn_hash_verified_count: 0,
           };
 
-          let blnValidated = await near.incrementRedemptionVerifiedCount(
-            record
-          );
+          try {
+            let blnValidated = await near.incrementRedemptionVerifiedCount(
+              record
+            );
 
-          console.log(
-            `${batchName}: Validating ${redemptionTxnHash} -> ${blnValidated}`
-          );
+            console.log(
+              `${batchName}: Validating ${redemptionTxnHash} -> ${blnValidated}`
+            );
+          } catch (error) {
+            console.error(`Error validating NEAR transaction: ${error}`);
+            await sendErrorEmail(error, batchName);
+            continue;
+          }
         } else if (chainConfig.networkType === NETWORK_TYPE.NEAR) {
           
           const timestamp = Math.floor(Date.now() / 1000);
@@ -129,15 +144,19 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
             btc_txn_hash_verified_count: 0,
           };
 
-          let blnValidated = await near.incrementRedemptionVerifiedCount(
-            record
-          );
+          try {
+            let blnValidated = await near.incrementRedemptionVerifiedCount(
+              record
+            );
 
-          
-
-          console.log(
-            `${batchName}: Validating ${redemptionTxnHash} -> ${blnValidated}`
-          );
+            console.log(
+                `${batchName}: Validating ${redemptionTxnHash} -> ${blnValidated}`
+              );
+          } catch (error) {
+            console.error(`Error ${batchName}:`, error);
+            await sendErrorEmail(error, batchName);
+            continue;
+          }
         }        
       }
 
@@ -145,6 +164,7 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
     } catch (error) {
       console.error(`Error ${batchName}:`, error);
       await sendErrorEmail(error, batchName);
+
     } finally {
       flagsBatch.ValidateAtlasBtcRedemptionsRunning = false;
     }
@@ -189,14 +209,20 @@ async function ValidateAtlasBtcRedemptionsBtcTxnHash(
 
         if (btcMempoolRecord) {
           const { txid } = btcMempoolRecord;
-          const blnValidated =
+          try {
+            const blnValidated =
             await near.incrementRedemptionBtcTxnHashVerifiedCount(
               redemption.txn_hash,
               txid
             );
 
-          if (blnValidated) {
-            console.log(`BTC Txn Hash ${txid} validated.`);
+            if (blnValidated) {
+              console.log(`BTC Txn Hash ${txid} validated.`);
+            }
+          } catch (error) {
+            console.error(`Error validating NEAR transaction: ${error}`);
+            await sendErrorEmail(error, batchName);
+            continue;
           }
         }
       }

@@ -73,6 +73,8 @@ class Near {
           "get_all_bridgings",
           "get_first_valid_bridging_chain_config",
           "is_production_mode",
+          "has_caller_verified_minted_txn_hash",
+          "has_caller_verified_redemption_txn_hash"
         ],
         changeMethods: [
           "insert_deposit_btc",
@@ -103,7 +105,7 @@ class Near {
           "update_bridging_remarks",
           "create_bridging_abtc_signed_tx",
           "update_bridging_minted",
-          "update_redemption_custody_txn_id",
+          "update_redemption_custody_txn_id"
         ],
       });
 
@@ -1039,6 +1041,24 @@ class Near {
 
   async isProductionMode() {
     return this.makeNearRpcViewCall("is_production_mode", {});
+  }
+
+  async hasCallerVerifiedMintedTxnHash(btcTxnHash, mintedTxnHash) {
+    console.log("[hasCallerVerifiedMintedTxnHash] btcTxnHash: ", btcTxnHash);
+    console.log("[hasCallerVerifiedMintedTxnHash] mintedTxnHash: ", mintedTxnHash);
+    return this.makeNearRpcViewCall("has_caller_verified_minted_txn_hash", {
+      caller: this.atlas_account_id,
+      btc_txn_hash: btcTxnHash,
+      minted_txn_hash: mintedTxnHash
+    });
+  }
+
+  async hasCallerVerifiedRedemptionTxnHash(txnHash) {
+    console.log("[hasCallerVerifiedRedemptionTxnHash] txnHash: ", txnHash);
+    return this.makeNearRpcViewCall("has_caller_verified_redemption_txn_hash", {
+      caller: this.atlas_account_id,
+      txn_hash: txnHash,
+    });
   }
 }
 
