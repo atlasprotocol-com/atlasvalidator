@@ -128,24 +128,24 @@ async function continuousValidation() {
       getAllBridgingHistory();
 
       // Validate deposits
-      ValidateAtlasBtcDeposits(
+      await ValidateAtlasBtcDeposits(
         deposits,
         bttcDepositAddress,
         near,
         bitcoin
       );
-      ValidateAtlasBtcDepositsMintedTxnHash(deposits, near);
+      await ValidateAtlasBtcDepositsMintedTxnHash(deposits, near);
 
       // Validate redemptions
-      ValidateAtlasBtcRedemptions(redemptions, near);
-      ValidateAtlasBtcRedemptionsBtcTxnHash(
+      await ValidateAtlasBtcRedemptions(redemptions, near);
+      await ValidateAtlasBtcRedemptionsBtcTxnHash(
         redemptions,
         btcMempool,
         near
       );
 
       // // Validate bridgings
-      ValidateAtlasBtcBridgings(bridgings, near);
+      await ValidateAtlasBtcBridgings(bridgings, near);
 
       // Sleep for a while before the next iteration
     } catch (error) {

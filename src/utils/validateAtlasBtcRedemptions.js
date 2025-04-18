@@ -133,6 +133,8 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
             record
           );
 
+          
+
           console.log(
             `${batchName}: Validating ${redemptionTxnHash} -> ${blnValidated}`
           );

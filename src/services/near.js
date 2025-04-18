@@ -31,6 +31,8 @@ class Near {
     this.gas = gas;
     this.mpcContractId = mpcContractId;
     this.aBTCAddress = aBTCAddress;
+    this.callCount = 0;
+    this.lastResetTime = Date.now();
   }
 
   async init() {
@@ -128,13 +130,23 @@ class Near {
     }
   }
 
-  // General function to make NEAR RPC change calls using this.nearContract
   async makeNearRpcChangeCall(methodName, args) {
     if (!this.nearContract) {
       throw new Error("NEAR contract is not initialized. Call init() first.");
     }
 
     try {
+      // Increment call count
+      this.callCount++;
+
+      // Check if 1 minute has passed and reset counter if needed
+      const now = Date.now();
+      if (now - this.lastResetTime >= 60000) {
+        console.log(`Near RPC calls in last minute: ${this.callCount}`);
+        this.callCount = 0;
+        this.lastResetTime = now;
+      }
+
       const result = await this.nearContract[methodName]({
         args,
         gas: this.gas,
