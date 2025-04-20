@@ -12,6 +12,7 @@ class Near {
 
   constructor(
     chain_rpc,
+    chain_rpc_provider,
     atlas_account_id,
     contract_id,
     pk,
@@ -21,12 +22,13 @@ class Near {
     aBTCAddress
   ) {
     this.chain_rpc = chain_rpc;
+    this.chain_rpc_provider = chain_rpc_provider;
     this.atlas_account_id = atlas_account_id;
     this.contract_id = contract_id;
     this.pk = pk;
     this.network_id = network_id;
     this.keyStore = new InMemoryKeyStore();
-    this.provider = new providers.JsonRpcProvider({ url: this.chain_rpc }); // Initialize provider here
+    this.provider = new providers.JsonRpcProvider({ url: this.chain_rpc_provider }); // Initialize provider here
     this.nearContract = null;
     this.gas = gas;
     this.mpcContractId = mpcContractId;

@@ -30,6 +30,7 @@ const bttcDepositAddress =
 
 const near = new Near(
   nearConfig.nodeUrl,
+  nearConfig.nodeUrlProvider,
   nearConfig.accountId,
   nearConfig.contractId,
   nearConfig.pk,
