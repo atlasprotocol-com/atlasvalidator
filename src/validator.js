@@ -125,7 +125,6 @@ async function continuousValidation() {
       console.log("Starting a new validation cycle...");
       getAllDepositHistory();
       getAllRedemptionHistory();
-      getBtcMempoolRecords();
       getAllBridgingHistory();
 
       // Validate deposits
@@ -141,8 +140,8 @@ async function continuousValidation() {
       await ValidateAtlasBtcRedemptions(redemptions, near);
       await ValidateAtlasBtcRedemptionsBtcTxnHash(
         redemptions,
-        btcMempool,
-        near
+        near,
+        bitcoin
       );
 
       // // Validate bridgings

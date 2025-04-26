@@ -6,6 +6,14 @@ const { sendErrorEmail } = require("./emailService");
 
 const { getChainConfig } = require("./network.chain.config");
 const { flagsBatch, blockRange } = require("./batchFlags");
+const config = require('../config/config.json');
+
+// Helper function to sleep for specified milliseconds
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Constants for batch processing
+const RECORDS_BEFORE_PAUSE = 10;
+const PAUSE_DURATION_MS = 60000; // 1 minute in milliseconds
 
 async function ValidateAtlasBtcRedemptions(redemptions, near) {
   const batchName = `Validator Batch ValidateAtlasBtcRedemptions`;
@@ -35,7 +43,25 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
         filteredTxns.length
       );
 
+      let processedCount = 0;
+
       for (const redemption of filteredTxns) {
+        processedCount++;
+        
+        // Pause after processing RECORDS_BEFORE_PAUSE records
+        if (processedCount % RECORDS_BEFORE_PAUSE === 0) {
+          console.log(`Processed ${processedCount} records. Pausing for ${PAUSE_DURATION_MS/1000} seconds...`);
+          await sleep(PAUSE_DURATION_MS);
+        }
+
+        const validatorsByTxnHash = await near.getValidatorsByTxnHash(redemption.txn_hash);
+
+        if (validatorsByTxnHash.includes(config.near.accountId)) {
+          console.log(redemption);
+          console.log("[ValidateAtlasBtcRedemptions] Current validator has already validated this redemption with txn_hash:", redemption.txn_hash);
+          continue;
+        }
+
         // const hasVerified = await near.hasCallerVerifiedRedemptionTxnHash(redemption.txn_hash);
         // if (hasVerified) {
         //   console.log("[validateAtlasBtcRedemptions] Caller has already verified this redemption");
@@ -176,8 +202,8 @@ async function ValidateAtlasBtcRedemptions(redemptions, near) {
 
 async function ValidateAtlasBtcRedemptionsBtcTxnHash(
   redemptions,
-  btcMempool,
-  near
+  near,
+  bitcoin
 ) {
   const batchName = `Validator Batch ValidateAtlasBtcRedemptionsBtcTxnHash`;
 
@@ -205,10 +231,34 @@ async function ValidateAtlasBtcRedemptionsBtcTxnHash(
           redemption.btc_txn_hash_verified_count < validatorThreshold
       );
 
+      let processedCount = 0;
+
       for (const redemption of allRedemptionsToValidate) {
-        const btcMempoolRecord = btcMempool?.data?.find?.(
-          (record) => record.txid === redemption.btc_txn_hash
-        );
+
+        processedCount++;
+        
+        // Pause after processing RECORDS_BEFORE_PAUSE records
+        if (processedCount % RECORDS_BEFORE_PAUSE === 0) {
+          console.log(`Processed ${processedCount} records. Pausing for ${PAUSE_DURATION_MS/1000} seconds...`);
+          await sleep(PAUSE_DURATION_MS);
+        }
+
+        const validatorsByTxnHash = await near.getValidatorsByTxnHash(redemption.txn_hash + DELIMITER.COMMA + redemption.btc_txn_hash);
+
+        if (validatorsByTxnHash.includes(config.near.accountId)) {
+          console.log("[ValidateAtlasBtcRedemptionsBtcTxnHash] Current validator has already validated this redemption btc txn hash");
+          continue;
+        }
+
+        let btcMempoolRecord;
+
+        try{
+          btcMempoolRecord = await bitcoin.fetchTxnByTxnID(nearTxn.btc_txn_hash);
+        } catch {
+          console.error(`Error ${batchName}:`, error);
+          await sendErrorEmail(error, batchName);
+        }
+        
 
         if (btcMempoolRecord) {
           const { txid } = btcMempoolRecord;
