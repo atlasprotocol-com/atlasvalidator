@@ -118,64 +118,49 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
           );
           
         } else if (chainConfig.networkType === NETWORK_TYPE.NEAR) {
-          
-          const startBlock = await near.getBlockNumberByTimestamp(
-            earliestTimestamp
-          );
+          try {
+            const timestamp = Math.floor(Date.now() / 1000);
+            const evmStatus = BRIDGING_STATUS.ABTC_BURNT;
 
-          const endBlock = Math.min(
-            Number(await near.getCurrentBlockNumber()),
-            Number(startBlock + 500)
-          );
-          console.log(
-            `${batchName}  chainID:${chainConfig.chainID} - startBlock: ${startBlock} endBlock:${endBlock}`
-          );
+            console.log(`Validating NEAR transaction: ${bridging.txn_hash.split(DELIMITER.COMMA)[1]}`);
+            const txResult = await near.provider.txStatus(
+              bridging.txn_hash.split(DELIMITER.COMMA)[1],
+              near.contract_id
+            );
 
-          const events = await near.getPastBurnBridgingEventsInBatches(
-            startBlock - 10,
-            endBlock + 10,
-            chainConfig.aBTCAddress
-          );
+            // Get first receipt from transaction result
+            const receipt = txResult.receipts_outcome[0];
 
-          for (const event of events) {
-            const {
-              returnValues: {
-                wallet,
-                destChainId,
-                destChainAddress,
-                amount,
-                protocolFee,
-                mintingFeeSat,
-                bridgingFeeSat,
-              },
-              transactionHash,
-              timestamp,
-              status,
-            } = event; // Make sure blockNumber is part of the event object
-
-            let bridgingTxnHash = `${chainConfig.chainID}${DELIMITER.COMMA}${transactionHash}`;
-            let evmStatus = 0;
-            if (status) {
-              evmStatus = BRIDGING_STATUS.ABTC_BURNT;
+            // Find first event log
+            const eventLog = receipt.outcome.logs[0];
+            if (!eventLog) {
+              console.log("No event logs found");
+              continue;
             }
+
+            // Parse event JSON
+            const eventJson = JSON.parse(eventLog.replace("EVENT_JSON:", ""));
+
+            // Process event based on type
+            const bridgeMemo = JSON.parse(eventJson.data[0].memo);
 
             // Create the BridgingRecord object
             const record = {
-              txn_hash: bridgingTxnHash,
+              txn_hash: bridging.txn_hash,
               origin_chain_id: chainConfig.chainID,
-              origin_chain_address: wallet,
-              dest_chain_id: destChainId,
-              dest_chain_address: destChainAddress,
+              origin_chain_address: bridgeMemo.address,
+              dest_chain_id: bridgeMemo.destChainId,
+              dest_chain_address: bridgeMemo.destChainAddress,
               dest_txn_hash: "", // this field not used in validation
-              abtc_amount: Number(amount),
-              protocol_fee: Number(protocolFee || 0),
+              abtc_amount: Number(eventJson.data[0].amount),
+              protocol_fee: 0,
               timestamp: timestamp,
               status: evmStatus,
               remarks: "",
               date_created: timestamp, // this field not used in validation
               verified_count: 0, // this field not used in validation
-              minting_fee_sat: Number(mintingFeeSat),
-              bridging_gas_fee_sat: Number(bridgingFeeSat),
+              minting_fee_sat: 0,
+              bridging_gas_fee_sat: 0,
               actual_gas_fee_sat: 0,
               yield_provider_gas_fee: 0,
               yield_provider_txn_hash: "",
@@ -184,7 +169,6 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
               treasury_btc_txn_hash: "",
               treasury_verified_count: 0,
               minted_txn_hash_verified_count: 0,
-
             };
 
             let blnValidated = await near.incrementBridgingVerifiedCount(
@@ -192,8 +176,12 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
             );
 
             console.log(
-              `${batchName}: Validating ${bridgingTxnHash} -> ${blnValidated}`
+              `${batchName}: Validating ${bridging.txn_hash} -> ${blnValidated}`
             );
+          } catch (error) {
+            console.error(`Error ${batchName}:`, error);
+            await sendErrorEmail(error, batchName);
+            continue;
           }
         }
       }
