@@ -127,7 +127,7 @@ async function ValidateAtlasBtcDeposits(
               yield_provider_txn_hash: "",
               retry_count: 0, // this field not used in validation
               minted_txn_hash_verified_count: 0, // this field not used in validation
-              custody_txn_id: "",
+              refund_txn_id: "",
             };
             console.log(btcMempoolDepositRecord);
 

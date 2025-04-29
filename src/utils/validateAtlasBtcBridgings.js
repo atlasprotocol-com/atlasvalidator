@@ -2,6 +2,8 @@ const { getConstants } = require("../constants");
 
 const { getChainConfig } = require("./network.chain.config");
 const { flagsBatch, blockRange } = require("./batchFlags");
+const config = require('../config/config.json');
+const { sendErrorEmail } = require("./emailService");
 
 const { Web3 } = require("web3");
 const { Ethereum } = require("../services/ethereum");
@@ -13,6 +15,14 @@ const { Ethereum } = require("../services/ethereum");
 // 4. TO DISCUSS: If validator_threshold gets updated suddenly, will this introduce any bugs?
 // 5. TO DISCUSS: Cannot delete verifications records else we are not able to allocate the airdrop
 // 6. TO DISCUSS: How to prevent authorised validators to directly call the public NEAR function increment_bridging_verified_count without going through this server.js function?
+
+// Helper function to sleep for specified milliseconds
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Constants for batch processing
+const RECORDS_BEFORE_PAUSE = 10;
+const PAUSE_DURATION_MS = 60000; // 1 minute in milliseconds
+
 async function ValidateAtlasBtcBridgings(bridgings, near) {
   const batchName = `Validator Batch ValidateAtlasBtcBridgings`;
 
@@ -26,37 +36,22 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
       flagsBatch.ValidateAtlasBtcBridgingsRunning = true;
 
       // Retrieve constants and validators_threshold
-      const { BRIDGING_STATUS, NETWORK_TYPE, DELIMITER } = getConstants(); // Access constants dynamically
+      const { BRIDGING_STATUS, NETWORK_TYPE, DELIMITER, EVENT_NAME } = getConstants(); // Access constants dynamically
 
-      const filteredTxns = bridgings.filter(
-        (bridging) =>
+      const filteredTxns = bridgings.filter((bridging) => {
+        const chainConfig = getChainConfig(bridging.origin_chain_id);
+        const validatorThreshold = chainConfig.validators_threshold;
+        return (
           bridging.status === BRIDGING_STATUS.ABTC_BURNT &&
-          bridging.remarks === ""
-      );
-
-      // Group bridgings by receiving_chain_id
-      const groupedTxns = filteredTxns.reduce((acc, bridging) => {
-        if (!acc[bridging.origin_chain_id]) {
-          acc[bridging.origin_chain_id] = [];
-        }
-        acc[bridging.origin_chain_id].push(bridging);
-        return acc;
-      }, {});
-
-      for (let chainID in groupedTxns) {
-        const chainConfig = getChainConfig(chainID);
-        let validatorThreshold = chainConfig.validators_threshold;
-       
-        const bridgings = groupedTxns[chainID].filter(
-          (bridging) => bridging.verified_count < validatorThreshold
+          bridging.remarks === "" &&
+          bridging.verified_count < validatorThreshold
         );
-        
-        if (bridgings.length === 0) continue;
+      });
 
-        // Find the earliest timestamp in the bridgings for this chain
-        const earliestTimestamp = Math.min(
-          ...bridgings.map((bridging) => bridging.timestamp)
-        );
+      for (let i = 0; i < filteredTxns.length; i++) {
+
+        const bridging = filteredTxns[i];
+        const chainConfig = getChainConfig(bridging.origin_chain_id);
 
         if (chainConfig.networkType === NETWORK_TYPE.EVM) {
           const web3 = new Web3(chainConfig.chainRpcUrl);
@@ -67,90 +62,61 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
             chainConfig.aBTCAddress,
             chainConfig.abiPath
           );
+          const matchingEvent = await ethereum.fetchEventByTxnHashAndEventName(bridging.txn_hash.split(DELIMITER.COMMA)[1], EVENT_NAME.BURN_BRIDGE);
+          
+          console.log(matchingEvent);
+          
+          const {
+            returnValues: {
+              wallet,
+              destChainId,
+              destChainAddress,
+              amount,
+              protocolFee,
+              mintingFeeSat,
+              bridgingFeeSat,
+            },
+            transactionHash,
+            blockNumber,
+          } = matchingEvent; // Make sure blockNumber is part of the event object
 
-          const startBlock = await ethereum.getBlockNumberByTimestamp(
-            earliestTimestamp
+          let bridgingTxnHash = `${chainConfig.chainID}${DELIMITER.COMMA}${transactionHash}`;
+          let timestamp = Math.floor(Date.now() / 1000);
+
+          // Create the BridgingRecord object
+          const record = {
+            txn_hash: bridgingTxnHash,
+            origin_chain_id: chainConfig.chainID,
+            origin_chain_address: wallet,
+            dest_chain_id: destChainId,
+            dest_chain_address: destChainAddress,
+            dest_txn_hash: "", // this field not used in validation
+            abtc_amount: Number(amount),
+            protocol_fee: Number(protocolFee || 0),
+            timestamp: timestamp,
+            status: BRIDGING_STATUS.ABTC_BURNT,
+            remarks: "",
+            date_created: timestamp, // this field not used in validation
+            verified_count: 0, // this field not used in validation
+            minting_fee_sat: Number(mintingFeeSat),
+            bridging_gas_fee_sat: Number(bridgingFeeSat),
+            actual_gas_fee_sat: 0,
+            yield_provider_gas_fee: 0,
+            yield_provider_txn_hash: "",
+            yield_provider_status: BRIDGING_STATUS.ABTC_BURNT,
+            yield_provider_remarks: "",
+            treasury_btc_txn_hash: "",
+            treasury_verified_count: 0,
+            minted_txn_hash_verified_count: 0,
+          };
+          let blnValidated = await near.incrementBridgingVerifiedCount(
+            record
           );
-          const endBlock = Math.min(
-            Number(await ethereum.getCurrentBlockNumber()),
-            Number(startBlock + BigInt(100))
-          );
+
           console.log(
-            `${batchName}  chainID:${chainConfig.chainID} - startBlock: ${startBlock} endBlock:${endBlock}`
+            `${batchName}: Validating ${bridgingTxnHash} -> ${blnValidated}`
           );
-
-          const events = await ethereum.getPastBurnBridgingEventsInBatches(
-            startBlock - BigInt(100),
-            endBlock,
-            blockRange(Number(chainConfig.batchSize))
-          );
-
-          console.log(
-            `${chainConfig.networkName}: Found ${events.length} Burn events`
-          );
-
-          for (const event of events) {
-            const {
-              returnValues: {
-                wallet,
-                destChainId,
-                destChainAddress,
-                amount,
-                protocolFee,
-                mintingFeeSat,
-                bridgingFeeSat,
-              },
-              transactionHash,
-              blockNumber,
-            } = event; // Make sure blockNumber is part of the event object
-
-            const block = await web3.eth.getBlock(blockNumber);
-            let bridgingTxnHash = `${chainConfig.chainID}${DELIMITER.COMMA}${transactionHash}`;
-            let timestamp = Number(block.timestamp);
-
-            // Fetch the transaction receipt to check the status
-            const receipt = await web3.eth.getTransactionReceipt(
-              transactionHash
-            );
-            let evmStatus = 0;
-            if (receipt.status) {
-              evmStatus = BRIDGING_STATUS.ABTC_BURNT;
-            }
-
-            // Create the BridgingRecord object
-            const record = {
-              txn_hash: bridgingTxnHash,
-              origin_chain_id: chainConfig.chainID,
-              origin_chain_address: wallet,
-              dest_chain_id: destChainId,
-              dest_chain_address: destChainAddress,
-              dest_txn_hash: "", // this field not used in validation
-              abtc_amount: Number(amount),
-              protocol_fee: Number(protocolFee || 0),
-              timestamp: timestamp,
-              status: evmStatus,
-              remarks: "",
-              date_created: timestamp, // this field not used in validation
-              verified_count: 0, // this field not used in validation
-              minting_fee_sat: Number(mintingFeeSat),
-              bridging_gas_fee_sat: Number(bridgingFeeSat),
-              actual_gas_fee_sat: 0,
-              yield_provider_gas_fee: 0,
-              yield_provider_txn_hash: "",
-              yield_provider_status: evmStatus,
-              yield_provider_remarks: "",
-              treasury_btc_txn_hash: "",
-              treasury_verified_count: 0,
-              minted_txn_hash_verified_count: 0,
-            };
-            let blnValidated = await near.incrementBridgingVerifiedCount(
-              record
-            );
-
-            console.log(
-              `${batchName}: Validating ${bridgingTxnHash} -> ${blnValidated}`
-            );
-          }
+          
         } else if (chainConfig.networkType === NETWORK_TYPE.NEAR) {
           
           const startBlock = await near.getBlockNumberByTimestamp(
@@ -241,4 +207,93 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
   }
 }
 
-module.exports = { ValidateAtlasBtcBridgings };
+async function ValidateAtlasBtcBridgingsMintedTxnHash(bridgings, near) {
+  const batchName = `Validator Batch ValidateAtlasBtcBridgingsMintedTxnHash`;
+
+  if (flagsBatch.ValidateAtlasBtcBridgingsMintedTxnHashRunning) {
+    console.log(`Previous ${batchName} incomplete. Will skip this run.`);
+    return;
+  } else {
+    try {
+      console.log(`${batchName}. Start run ...`);
+      flagsBatch.ValidateAtlasBtcBridgingsMintedTxnHashRunning = true;
+
+      const { BRIDGING_STATUS, NETWORK_TYPE, DELIMITER, EVENT_NAME } = getConstants(); // Access constants dynamically
+
+      const allBridgingsToValidate = bridgings.filter(
+        (bridging) =>
+          bridging.status === BRIDGING_STATUS.ABTC_PENDING_BRIDGE_FROM_ORIGIN_TO_DEST &&
+          bridging.dest_txn_hash !== "" &&
+          bridging.remarks === "" &&
+          bridging.minted_txn_hash_verified_count < getChainConfig(bridging.dest_chain_id).validators_threshold
+      );
+
+      let processedCount = 0;
+
+      for (const bridging of allBridgingsToValidate) {
+        processedCount++;
+        
+        // Pause after processing RECORDS_BEFORE_PAUSE records
+        if (processedCount % RECORDS_BEFORE_PAUSE === 0) {
+          console.log(`Processed ${processedCount} records. Pausing for ${PAUSE_DURATION_MS/1000} seconds...`);
+          await sleep(PAUSE_DURATION_MS);
+        }
+
+        const validatorsByTxnHash = await near.getValidatorsByTxnHash(bridging.txn_hash + DELIMITER.COMMA + bridging.dest_txn_hash);
+
+        if (validatorsByTxnHash.includes(config.near.accountId)) {
+          console.log("[ValidateAtlasBtcBridgingsMintedTxnHash] Current validator has already validated this bridging minted txn hash");
+          continue;
+        }
+
+        const chainConfig = getChainConfig(bridging.dest_chain_id);
+        let mintedTxnRecord;
+
+        try {
+          if (chainConfig.networkType === NETWORK_TYPE.EVM) {
+            const ethereum = new Ethereum(
+              chainConfig.chainID,
+              chainConfig.chainRpcUrl,
+              chainConfig.gasLimit,
+              chainConfig.aBTCAddress,
+              chainConfig.abiPath
+            );
+            mintedTxnRecord = await ethereum.fetchEventByTxnHashAndEventName(
+              bridging.dest_txn_hash,
+              EVENT_NAME.MINT_BRIDGE
+            );
+          } else if (chainConfig.networkType === NETWORK_TYPE.NEAR) {
+            mintedTxnRecord = await near.provider.txStatus(
+              bridging.dest_txn_hash,
+              near.contract_id
+            );
+          }
+
+          if (mintedTxnRecord) {
+            const blnValidated = await near.incrementBridgingMintedTxnHashVerifiedCount(
+              bridging.txn_hash,
+              bridging.dest_txn_hash
+            );
+
+            if (blnValidated) {
+              console.log(`Minted Txn Hash ${bridging.dest_txn_hash} validated.`);
+            }
+          }
+        } catch (error) {
+          console.error(`Error validating minted transaction: ${error}`);
+          await sendErrorEmail(error, batchName);
+          continue;
+        }
+      }
+
+      console.log(`${batchName} completed successfully.`);
+    } catch (error) {
+      console.error(`Error ${batchName}:`, error);
+      await sendErrorEmail(error, batchName);
+    } finally {
+      flagsBatch.ValidateAtlasBtcBridgingsMintedTxnHashRunning = false;
+    }
+  }
+}
+
+module.exports = { ValidateAtlasBtcBridgings, ValidateAtlasBtcBridgingsMintedTxnHash };

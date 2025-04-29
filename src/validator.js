@@ -10,6 +10,7 @@ const {
 } = require("./utils/validateAtlasBtcRedemptions");
 const {
   ValidateAtlasBtcBridgings,
+  ValidateAtlasBtcBridgingsMintedTxnHash,
 } = require("./utils/validateAtlasBtcBridgings");
 const { fetchAndSetChainConfigs } = require("./utils/network.chain.config");
 
@@ -146,6 +147,7 @@ async function continuousValidation() {
 
       // // Validate bridgings
       await ValidateAtlasBtcBridgings(bridgings, near);
+      await ValidateAtlasBtcBridgingsMintedTxnHash(bridgings, near);
 
       // Sleep for a while before the next iteration
     } catch (error) {
