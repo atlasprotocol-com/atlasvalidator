@@ -56,10 +56,11 @@ const getAllDepositHistory = async (limit = 1000) => {
 
     while (true) {
       const pageDeposits = await near.getAllDeposits(fromIndex, limit);
-      if (pageDeposits.length < limit) break; // No more records
 
       allDeposits = allDeposits.concat(pageDeposits);
       fromIndex += limit;
+
+      if (pageDeposits.length < limit) break; // No more records
     }
 
     deposits = allDeposits;
@@ -76,10 +77,11 @@ const getAllRedemptionHistory = async (limit = 1000) => {
 
     while (true) {
       const pageRedemptions = await near.getAllRedemptions(fromIndex, limit);
-      if (pageRedemptions.length < limit) break; // No more records
 
       allRedemptions = allRedemptions.concat(pageRedemptions);
       fromIndex += limit;
+
+      if (pageRedemptions.length < limit) break; // No more records
     }
 
     redemptions = allRedemptions;
@@ -125,6 +127,10 @@ async function continuousValidation() {
       getAllDepositHistory();
       getAllRedemptionHistory();
       getAllBridgingHistory();
+
+      console.log(`deposits: ${deposits.length}`);
+      console.log(`redemptions: ${redemptions.length}`);
+      console.log(`bridgings: ${bridgings.length}`);
 
       // Validate deposits
       await ValidateAtlasBtcDeposits(
