@@ -15,7 +15,7 @@ const {
 const { fetchAndSetChainConfigs } = require("./utils/network.chain.config");
 
 const { fetchAndSetConstants } = require("./constants");
-
+const { flagsBatch } = require("./utils/batchFlags");
 const { Near } = require("./services/near");
 const { Bitcoin } = require("./services/bitcoin");
 
@@ -101,13 +101,74 @@ const getBtcMempoolRecords = async () => {
   }
 };
 
-// Function to poll Near Atlas bridging records
-const getAllBridgingHistory = async () => {
+/**
+ * Fetches all bridging history from NEAR with pagination and concurrent request limiting
+ * @param {Object} near - NEAR instance
+ * @param {number} limit - Number of records per batch
+ * @param {number} concurrentLimit - Maximum number of concurrent requests
+ * @returns {Promise<Array>} Array of bridging records
+ */
+const getAllBridgingHistory = async (limit = 100, concurrentLimit = 5) => {
+  if (flagsBatch.GetAllBridgingHistoryRunning) {
+    console.log(
+      "[getAllBridgingHistory] GetAllBridgingHistoryRunning is running",
+    );
+    return;
+  }
+
+  flagsBatch.GetAllBridgingHistoryRunning = true;
+
   try {
-    bridgings = await near.getAllBridgings();
-    console.log(`Fetching bridging history: ${bridgings.length}`);
+    // First, get the first batch to check if there are any bridgings
+    const firstBatch = await near.getAllBridgings(0, limit);
+
+    if (firstBatch.length === 0) {
+      console.log("[getAllBridgingHistory] No bridgings found");
+      return [];
+    }
+
+    let allBridgings = [...firstBatch];
+
+    // Get total count from NEAR to calculate number of batches needed
+    const totalCount = await near.getTotalBridgingCount();
+    const totalBatches = Math.ceil(totalCount / limit);
+
+    // Process batches in chunks to limit concurrent requests
+    for (let i = 1; i < totalBatches; i += concurrentLimit) {
+      console.log(`Processing batch ${i} of ${totalBatches}`);
+      const batchPromises = [];
+      const end = Math.min(i + concurrentLimit, totalBatches);
+      
+      for (let j = i; j < end; j++) {
+        const currentOffset = j * limit;
+        batchPromises.push(near.getAllBridgings(currentOffset, limit));
+      }
+
+      // Fetch current chunk of batches in parallel
+      const batchResults = await Promise.all(batchPromises);
+
+      // Combine results from current chunk
+      batchResults.forEach((batch) => {
+        allBridgings = allBridgings.concat(batch);
+      });
+
+      // Optional: Add small delay between chunks to prevent overloading
+      if (i + concurrentLimit < totalBatches) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    console.log(
+      "[getAllBridgingHistory] Total bridgings fetched:",
+      allBridgings.length,
+    );
+
+    bridgings = allBridgings;
   } catch (error) {
-    console.error(`Failed to fetch bridging history: ${error.message}`);
+    console.error(`[getAllBridgingHistory] Failed: ${error.message}`);
+    return [];
+  } finally {
+    flagsBatch.GetAllBridgingHistoryRunning = false;
   }
 };
 // One-time initialization function
@@ -124,9 +185,9 @@ async function continuousValidation() {
     try {
       // Fetch data
       console.log("Starting a new validation cycle...");
-      getAllDepositHistory();
-      getAllRedemptionHistory();
-      getAllBridgingHistory();
+      await getAllDepositHistory();
+      await getAllRedemptionHistory();
+      await getAllBridgingHistory();
 
       console.log(`deposits: ${deposits.length}`);
       console.log(`redemptions: ${redemptions.length}`);

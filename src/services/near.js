@@ -75,7 +75,8 @@ class Near {
           "get_all_bridgings",
           "get_first_valid_bridging_chain_config",
           "is_production_mode",
-          "get_validators_by_txn_hash"
+          "get_validators_by_txn_hash",
+          "get_bridgings_count"
         ],
         changeMethods: [
           "insert_deposit_btc",
@@ -202,8 +203,15 @@ class Near {
   }
 
   // Function to get all redemptions from NEAR contract
-  async getAllBridgings() {
-    return this.makeNearRpcViewCall("get_all_bridgings", {});
+  async getAllBridgings(fromIndex = 0, limit = 1000) {
+    return this.makeNearRpcViewCall("get_all_bridgings", {
+      from_index: fromIndex,
+      limit: limit
+    });
+  }
+
+  async getTotalBridgingCount() {
+    return this.makeNearRpcViewCall("get_bridgings_count", {});
   }
 
   async getBridgingByTxnHash(transactionHash) {

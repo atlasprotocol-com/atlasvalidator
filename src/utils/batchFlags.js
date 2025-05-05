@@ -12,6 +12,7 @@ const flagsBatch = {
   UpdateAtlasBtcBackToUserRunning: false,
   ValidateAtlasBtcBridgingsRunning: false,
   ValidateAtlasBtcBridgingsMintedTxnHashRunning: false,
+  GetAllBridgingHistoryRunning: false,
 };
 
 function blockRange(block, start = 1000, end = 2000) {
