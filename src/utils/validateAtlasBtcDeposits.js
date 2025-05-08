@@ -58,7 +58,7 @@ async function ValidateAtlasBtcDeposits(
       // For each NEAR deposit record, find respective bitcoin txn from bitcoin mempool with status = confirmed and prepare a mempool_deposit record to pass into NEAR function
       for (const nearTxn of allDepositsToValidate) {
         processedCount++;
-        
+        console.log(`[ValidateAtlasBtcDeposits] Processing record ${processedCount} of ${allDepositsToValidate.length}`);
         // Pause after processing RECORDS_BEFORE_PAUSE records
         if (processedCount % RECORDS_BEFORE_PAUSE === 0) {
           console.log(`Processed ${processedCount} records. Pausing for ${PAUSE_DURATION_MS/1000} seconds...`);

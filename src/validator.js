@@ -202,11 +202,11 @@ async function continuousValidation() {
       );
       await ValidateAtlasBtcDepositsMintedTxnHash(deposits, near);
 
-      // Validate redemptions
+      // // Validate redemptions
       await ValidateAtlasBtcRedemptions(redemptions, near);
       await ValidateAtlasBtcRedemptionsBtcTxnHash(redemptions, near, bitcoin);
 
-      // // Validate bridgings
+      // // // Validate bridgings
       await ValidateAtlasBtcBridgings(bridgings, near);
       await ValidateAtlasBtcBridgingsMintedTxnHash(bridgings, near);
 

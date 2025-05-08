@@ -48,9 +48,28 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
         );
       });
 
-      for (let i = 0; i < filteredTxns.length; i++) {
+      console.log("[ValidateAtlasBtcBridgings] Transaction to validate: ", filteredTxns.length);
 
+      for (let i = 0; i < filteredTxns.length; i++) {
+        // Print progress for current record
+        console.log(`[ValidateAtlasBtcBridgings] Processing record ${i + 1} of ${filteredTxns.length}`);
+        
+        // Pause after processing RECORDS_BEFORE_PAUSE records
+        if ((i + 1) % RECORDS_BEFORE_PAUSE === 0) {
+          console.log(`Processed ${i + 1} records. Pausing for ${PAUSE_DURATION_MS/1000} seconds...`);
+          await sleep(PAUSE_DURATION_MS);
+        }
         const bridging = filteredTxns[i];
+
+        const validatorsByTxnHash = await near.getValidatorsByTxnHash(bridging.txn_hash);
+
+        if (validatorsByTxnHash.includes(config.near.accountId)) {
+          console.log("[ValidateAtlasBtcBridgings] Current validator has already validated this bridging txn hash: ", bridging.txn_hash);
+          continue;
+        }
+
+        
+        console.log("[ValidateAtlasBtcBridgings] Bridging: ", bridging);
         const chainConfig = getChainConfig(bridging.origin_chain_id);
 
         if (chainConfig.networkType === NETWORK_TYPE.EVM) {
@@ -64,7 +83,7 @@ async function ValidateAtlasBtcBridgings(bridgings, near) {
           );
           const matchingEvent = await ethereum.fetchEventByTxnHashAndEventName(bridging.txn_hash.split(DELIMITER.COMMA)[1], EVENT_NAME.BURN_BRIDGE);
           
-          console.log(matchingEvent);
+          //console.log(matchingEvent);
           
           const {
             returnValues: {

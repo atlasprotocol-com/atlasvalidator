@@ -359,10 +359,11 @@ class Ethereum {
   async fetchEventByTxnHashAndEventName(txnHash, eventName) {
     
     const receipt = await this.web3.eth.getTransactionReceipt(txnHash);
-    if (!receipt) return null;
 
+    if (!receipt) return null;
     const events = await this.abtcContract.getPastEvents(eventName, { fromBlock: receipt.blockNumber, toBlock: receipt.blockNumber });
-    return events[0];
+   
+    return events.find(event => event.transactionHash === txnHash);
   }
 }
 module.exports = { Ethereum };
