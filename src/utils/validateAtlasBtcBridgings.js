@@ -238,19 +238,20 @@ async function ValidateAtlasBtcBridgingsMintedTxnHash(bridgings, near) {
       let processedCount = 0;
 
       for (const bridging of allBridgingsToValidate) {
+        
+        const validatorsByTxnHash = await near.getValidatorsByTxnHash(bridging.txn_hash + DELIMITER.COMMA + bridging.dest_txn_hash);
+
+        if (validatorsByTxnHash.includes(config.near.accountId)) {
+          console.log("[ValidateAtlasBtcBridgingsMintedTxnHash] Current validator has already validated this bridging minted txn hash");
+          continue;
+        }
+        
         processedCount++;
         
         // Pause after processing RECORDS_BEFORE_PAUSE records
         if (processedCount % RECORDS_BEFORE_PAUSE === 0) {
           console.log(`Processed ${processedCount} records. Pausing for ${PAUSE_DURATION_MS/1000} seconds...`);
           await sleep(PAUSE_DURATION_MS);
-        }
-
-        const validatorsByTxnHash = await near.getValidatorsByTxnHash(bridging.txn_hash + DELIMITER.COMMA + bridging.dest_txn_hash);
-
-        if (validatorsByTxnHash.includes(config.near.accountId)) {
-          console.log("[ValidateAtlasBtcBridgingsMintedTxnHash] Current validator has already validated this bridging minted txn hash");
-          continue;
         }
 
         const chainConfig = getChainConfig(bridging.dest_chain_id);
