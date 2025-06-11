@@ -216,7 +216,7 @@ async function ValidateAtlasBtcRedemptionsBtcTxnHash(
       flagsBatch.ValidateAtlasBtcRedemptionsBtcTxnHashRunning = true;
 
       const isProductionMode = await near.isProductionMode();
-      const { REDEMPTION_STATUS, NETWORK_TYPE } = getConstants();
+      const { REDEMPTION_STATUS, NETWORK_TYPE, DELIMITER } = getConstants();
       const chainConfig = getChainConfig(
         isProductionMode ? NETWORK_TYPE.BITCOIN : NETWORK_TYPE.TESTNET4
       );
@@ -253,10 +253,11 @@ async function ValidateAtlasBtcRedemptionsBtcTxnHash(
         let btcMempoolRecord;
 
         try{
-          btcMempoolRecord = await bitcoin.fetchTxnByTxnID(nearTxn.btc_txn_hash);
-        } catch {
+          btcMempoolRecord = await bitcoin.fetchTxnByTxnID(redemption.btc_txn_hash);
+        } catch (error) {
           console.error(`Error ${batchName}:`, error);
           await sendErrorEmail(error, batchName);
+          continue;
         }
         
 
